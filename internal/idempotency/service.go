@@ -41,11 +41,11 @@ func (s *Service) Lookup(ctx context.Context, q *sqlc.Queries, scope, key string
 		}
 		return StoredResponse{}, false, fmt.Errorf("idempotency lookup: %w", err)
 	}
-	if !row.ResponseStatus.Valid {
+	if row.ResponseStatus == nil {
 		return StoredResponse{}, false, nil
 	}
 	return StoredResponse{
-		StatusCode: int(row.ResponseStatus.Int32),
+		StatusCode: int(*row.ResponseStatus),
 		Body:       row.ResponseBody,
 	}, true, nil
 }
