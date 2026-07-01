@@ -18,7 +18,7 @@ This folder contains the implementation specifications for **Arrakin**, a reliab
 | 5 | Ledger & idempotency | Domain logic complete |
 | 6 | HTTP API & reconciliation endpoints | Complete |
 | 7 | Integration tests | Complete |
-| 8 | Admin UI shell | Not started |
+| 8 | Admin UI shell | Complete |
 | 9 | Demo polish & CI | Not started |
 
 ## Conventions

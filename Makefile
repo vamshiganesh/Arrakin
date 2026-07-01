@@ -18,7 +18,8 @@ help:
 	@echo "  make build         Build the API binary"
 	@echo "  make run           Run the API locally"
 	@echo "  make test          Run unit tests (skips DB integration)"
-	@echo "  make test-integration  Run Docker Postgres integration tests"
+	@echo "  make admin-dev     Start React admin UI (port 5173)"
+	@echo "  make admin-build   Build admin UI for production"
 	@echo "  make tidy          go mod tidy"
 
 build:
@@ -33,6 +34,12 @@ test:
 
 test-integration:
 	go test -tags=integration ./internal/integration/... -v -count=1 -timeout 120s
+
+admin-dev:
+	cd web/admin && npm run dev
+
+admin-build:
+	cd web/admin && npm run build
 
 sqlc:
 	sqlc generate
