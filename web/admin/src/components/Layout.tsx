@@ -31,7 +31,11 @@ export function Layout() {
         </nav>
       </aside>
       <main className="main">
-        <Outlet />
+        <ScrollArea className="main-scroll">
+          <div className="main-content">
+            <Outlet />
+          </div>
+        </ScrollArea>
       </main>
     </div>
   )
