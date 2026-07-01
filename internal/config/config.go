@@ -16,9 +16,15 @@ type Config struct {
 	DatabaseURL      string
 	RedisURL         string
 	SchedulerInterval time.Duration
-	WorkerCount      int
-	JobLeaseTimeout  time.Duration
-	MaxRetries       int
+	SchedulerBatchSize int
+	WorkerCount       int
+	WorkerPollInterval time.Duration
+	WorkerBatchSize   int
+	JobLeaseTimeout   time.Duration
+	ReaperInterval    time.Duration
+	MaxRetries        int
+	RetryBaseDelay    time.Duration
+	RetryMaxDelay     time.Duration
 	PlatformFeeBPS   int
 	WithholdingTaxBPS int
 	APIKey           string
@@ -33,10 +39,16 @@ func Load() (Config, error) {
 		ShutdownTimeout:   getEnvDuration("SHUTDOWN_TIMEOUT", 15*time.Second),
 		DatabaseURL:       os.Getenv("DATABASE_URL"),
 		RedisURL:          os.Getenv("REDIS_URL"),
-		SchedulerInterval: getEnvDuration("SCHEDULER_INTERVAL", 30*time.Second),
-		WorkerCount:       getEnvInt("WORKER_COUNT", 4),
-		JobLeaseTimeout:   getEnvDuration("JOB_LEASE_TIMEOUT", 5*time.Minute),
-		MaxRetries:        getEnvInt("MAX_RETRIES", 5),
+		SchedulerInterval:  getEnvDuration("SCHEDULER_INTERVAL", 30*time.Second),
+		SchedulerBatchSize: getEnvInt("SCHEDULER_BATCH_SIZE", 50),
+		WorkerCount:        getEnvInt("WORKER_COUNT", 4),
+		WorkerPollInterval: getEnvDuration("WORKER_POLL_INTERVAL", time.Second),
+		WorkerBatchSize:    getEnvInt("WORKER_BATCH_SIZE", 1),
+		JobLeaseTimeout:    getEnvDuration("JOB_LEASE_TIMEOUT", 5*time.Minute),
+		ReaperInterval:     getEnvDuration("REAPER_INTERVAL", 60*time.Second),
+		MaxRetries:         getEnvInt("MAX_RETRIES", 5),
+		RetryBaseDelay:     getEnvDuration("RETRY_BASE_DELAY", 5*time.Second),
+		RetryMaxDelay:      getEnvDuration("RETRY_MAX_DELAY", 15*time.Minute),
 		PlatformFeeBPS:    getEnvInt("PLATFORM_FEE_BPS", 100),
 		WithholdingTaxBPS: getEnvInt("WITHHOLDING_TAX_BPS", 1500),
 		APIKey:            os.Getenv("API_KEY"),

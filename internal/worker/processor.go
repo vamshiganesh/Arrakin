@@ -109,6 +109,7 @@ func (p *Processor) completeSuccess(
 	job sqlc.SettlementJob,
 	attempt sqlc.PayoutAttempt,
 	investorID, jobID uuid.UUID,
+	currency string,
 	payoutReference, workerID string,
 ) error {
 	breakdown := settlement.Breakdown{
@@ -117,7 +118,7 @@ func (p *Processor) completeSuccess(
 		PlatformFeeCents:    money.Cents(job.PlatformFeeCents),
 		WithholdingTaxCents: money.Cents(job.WithholdingTaxCents),
 		NetPayoutCents:      money.Cents(job.NetPayoutCents),
-		Currency:            "USD",
+		Currency:            currency,
 	}
 	if err := breakdown.Validate(); err != nil {
 		return err
