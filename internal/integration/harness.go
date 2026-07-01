@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/vamshiganesh/arrakin/internal/domain/settlement"
 	"github.com/vamshiganesh/arrakin/internal/audit"
 	"github.com/vamshiganesh/arrakin/internal/ledger"
 	"github.com/vamshiganesh/arrakin/internal/reconciliation"
@@ -133,15 +134,49 @@ func SeedDueMaturity(t *testing.T, pool *pgxpool.Pool, ctx context.Context, simu
 	return fix
 }
 
-// EnqueueMaturity runs the orchestrator once and returns the job for the fixture maturity.
-func EnqueueMaturity(t *testing.T, ctx context.Context, stack *Stack, fix Fixture) sqlc.SettlementJob {
+// CreateJobForFixture calculates settlement amounts and creates a pending job for one maturity.
+// Unlike scheduler tick, this does not scan or enqueue other due maturities.
+func CreateJobForFixture(t *testing.T, ctx context.Context, stack *Stack, fix Fixture) sqlc.SettlementJob {
 	t.Helper()
-	if _, err := stack.Scheduler.TickOnce(ctx); err != nil {
-		t.Fatalf("scheduler tick: %v", err)
-	}
-	job, err := JobByMaturity(ctx, stack.Store.Pool(), fix.MaturityID)
+	investment, err := stack.Store.Queries().GetInvestmentByID(ctx, store.UUIDToPgtype(fix.InvestmentID))
 	if err != nil {
-		t.Fatalf("load job for maturity: %v", err)
+		t.Fatalf("load investment: %v", err)
+	}
+	terms := settlement.InvestmentTerms{
+		PrincipalCents: investment.PrincipalCents,
+		AnnualRateBPS:  int(investment.AnnualRateBps),
+		TermDays:       int(investment.TermDays),
+		Currency:       investment.Currency,
+	}
+	breakdown, err := stack.OrchCalc().Calculate(terms)
+	if err != nil {
+		t.Fatalf("calculate: %v", err)
+	}
+
+	var job sqlc.SettlementJob
+	err = stack.Store.WithTx(ctx, func(ctx context.Context, q *sqlc.Queries) error {
+		var inserted bool
+		job, inserted, err = stack.Store.Repos().SettlementJobs.CreateIdempotent(ctx, q, store.CreateJobParams{
+			MaturityScheduleID:  store.UUIDToPgtype(fix.MaturityID),
+			InvestmentID:        store.UUIDToPgtype(fix.InvestmentID),
+			IdempotencyKey:      fmt.Sprintf("maturity:%s", fix.MaturityID),
+			PrincipalCents:      breakdown.PrincipalCents.Int64(),
+			GrossReturnCents:    breakdown.GrossReturnCents.Int64(),
+			PlatformFeeCents:    breakdown.PlatformFeeCents.Int64(),
+			WithholdingTaxCents: breakdown.WithholdingTaxCents.Int64(),
+			NetPayoutCents:      breakdown.NetPayoutCents.Int64(),
+			MaxRetries:          5,
+		})
+		if err != nil {
+			return err
+		}
+		if !inserted {
+			t.Fatal("expected new job for fresh maturity fixture")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("create job: %v", err)
 	}
 	return job
 }
