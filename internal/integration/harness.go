@@ -201,8 +201,17 @@ func ProcessJobUntilStatus(
 	workerID string,
 	timeout time.Duration,
 ) sqlc.SettlementJob {
-	return ProcessUntilStatus(t, ctx, stack, jobID, target, workerID, timeout)
+	return processUntilStatus(t, ctx, stack, jobID, target, workerID, timeout)
 }
+
+func processUntilStatus(
+	t *testing.T,
+	ctx context.Context,
+	stack *Stack,
+	jobID uuid.UUID,
+	target sqlc.SettlementJobStatus,
+	workerID string,
+	timeout time.Duration,
 ) sqlc.SettlementJob {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
