@@ -3,6 +3,7 @@
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- Lifecycle of a debt position from active through settled or cancelled.
 CREATE TYPE investment_status AS ENUM (
     'active',
     'matured',
@@ -42,6 +43,7 @@ CREATE TYPE audit_actor_type AS ENUM (
     'api'
 );
 
+-- Platform investors; external_ref maps to upstream identity systems.
 CREATE TABLE investors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     external_ref TEXT NOT NULL UNIQUE,
@@ -49,6 +51,8 @@ CREATE TABLE investors (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Debt positions: principal in cents, rate in basis points, term in days.
+-- simulation_profile drives demo payout behavior (NULL in production).
 CREATE TABLE investments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     investor_id UUID NOT NULL REFERENCES investors (id),
@@ -67,6 +71,7 @@ CREATE TABLE investments (
 CREATE INDEX idx_investments_investor_id ON investments (investor_id);
 CREATE INDEX idx_investments_status ON investments (status);
 
+-- One maturity per investment (v1). Scheduler scans pending rows by matures_at.
 CREATE TABLE maturity_schedules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     investment_id UUID NOT NULL UNIQUE REFERENCES investments (id),
@@ -80,6 +85,8 @@ CREATE INDEX idx_maturity_schedules_pending_due
     ON maturity_schedules (matures_at)
     WHERE status = 'pending';
 
+-- Settlement work queue: amounts snapshotted at enqueue; payout_reference set on success.
+-- UNIQUE(maturity_schedule_id) guarantees at most one job per maturity.
 CREATE TABLE settlement_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     maturity_schedule_id UUID NOT NULL UNIQUE REFERENCES maturity_schedules (id),
@@ -113,6 +120,7 @@ CREATE INDEX idx_settlement_jobs_status_processing_started
 
 CREATE INDEX idx_settlement_jobs_investment_id ON settlement_jobs (investment_id);
 
+-- Per-attempt payout history for retries, debugging, and audit.
 CREATE TABLE payout_attempts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     settlement_job_id UUID NOT NULL REFERENCES settlement_jobs (id),
@@ -128,6 +136,7 @@ CREATE TABLE payout_attempts (
 
 CREATE INDEX idx_payout_attempts_settlement_job_id ON payout_attempts (settlement_job_id);
 
+-- Chart of accounts; codes like INVESTOR_PAYABLE:{uuid} created lazily at posting time.
 CREATE TABLE ledger_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code TEXT NOT NULL UNIQUE,
@@ -136,6 +145,7 @@ CREATE TABLE ledger_accounts (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Append-only double-entry lines. Immutability enforced in 000002 via trigger.
 CREATE TABLE ledger_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entry_group_id UUID NOT NULL,
@@ -153,6 +163,7 @@ CREATE INDEX idx_ledger_entries_settlement_job_id ON ledger_entries (settlement_
 CREATE INDEX idx_ledger_entries_posted_at ON ledger_entries (posted_at);
 CREATE INDEX idx_ledger_entries_entry_group_id ON ledger_entries (entry_group_id);
 
+-- HTTP/admin request dedupe: (scope, key) returns cached response until expires_at.
 CREATE TABLE idempotency_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     key TEXT NOT NULL,
@@ -167,6 +178,7 @@ CREATE TABLE idempotency_keys (
 
 CREATE INDEX idx_idempotency_keys_expires_at ON idempotency_keys (expires_at);
 
+-- Operational snapshots comparing expected vs processed settlement totals.
 CREATE TABLE reconciliation_snapshots (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     snapshot_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -183,6 +195,7 @@ CREATE TABLE reconciliation_snapshots (
 
 CREATE INDEX idx_reconciliation_snapshots_snapshot_at ON reconciliation_snapshots (snapshot_at DESC);
 
+-- Append-only event trail for job transitions and admin actions.
 CREATE TABLE audit_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT now(),
