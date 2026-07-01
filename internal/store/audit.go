@@ -71,6 +71,30 @@ func (AuditRepo) ListByEntity(ctx context.Context, q *sqlc.Queries, entityType s
 	return events, nil
 }
 
+// List returns audit events matching optional filters with cursor pagination.
+func (AuditRepo) List(ctx context.Context, q *sqlc.Queries, filter ListAuditEventsFilter) ([]sqlc.AuditEvent, error) {
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+
+	events, err := q.ListAuditEvents(ctx, sqlc.ListAuditEventsParams{
+		EntityType: filter.EntityType,
+		EntityID:   filter.EntityID,
+		Action:     filter.Action,
+		CursorTime: filter.CursorTime,
+		CursorID:   filter.CursorID,
+		LimitVal:   limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list audit events: %w", err)
+	}
+	return events, nil
+}
+
 // IsNotFound reports whether err is a store not-found error.
 func IsNotFound(err error) bool {
 	return errors.Is(err, ErrNotFound) || errors.Is(err, pgx.ErrNoRows)

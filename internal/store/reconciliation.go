@@ -14,6 +14,22 @@ import (
 type ReconciliationRepository interface {
 	CreateSnapshot(ctx context.Context, q *sqlc.Queries) (sqlc.ReconciliationSnapshot, error)
 	GetLatest(ctx context.Context, q *sqlc.Queries) (sqlc.ReconciliationSnapshot, error)
+	List(ctx context.Context, q *sqlc.Queries, filter ListReconciliationSnapshotsFilter) ([]sqlc.ReconciliationSnapshot, error)
+	FlagCounts(ctx context.Context, q *sqlc.Queries) (ReconciliationFlagCounts, error)
+}
+
+// ListReconciliationSnapshotsFilter controls reconciliation snapshot list queries.
+type ListReconciliationSnapshotsFilter struct {
+	CursorTime pgtype.Timestamptz
+	CursorID   pgtype.UUID
+	Limit      int32
+}
+
+// ReconciliationFlagCounts holds inputs for discrepancy flag computation.
+type ReconciliationFlagCounts struct {
+	MissingLedger int32
+	OrphanLedger  int32
+	StalePending  int32
 }
 
 // ReconciliationRepo implements ReconciliationRepository.

@@ -27,6 +27,19 @@ type LedgerRepository interface {
 	GetEntryGroupID(ctx context.Context, q *sqlc.Queries, jobID pgtype.UUID) (pgtype.UUID, error)
 	PostEntries(ctx context.Context, q *sqlc.Queries, jobID, entryGroupID pgtype.UUID, lines []LedgerLineInput) ([]sqlc.LedgerEntry, error)
 	ListByJobID(ctx context.Context, q *sqlc.Queries, jobID pgtype.UUID) ([]sqlc.LedgerEntry, error)
+	List(ctx context.Context, q *sqlc.Queries, filter ListLedgerEntriesFilter) ([]sqlc.LedgerEntry, error)
+	ListAccounts(ctx context.Context, q *sqlc.Queries) ([]sqlc.LedgerAccount, error)
+}
+
+// ListLedgerEntriesFilter controls ledger entry list queries.
+type ListLedgerEntriesFilter struct {
+	SettlementJobID pgtype.UUID
+	AccountCode     *string
+	FromTime        pgtype.Timestamptz
+	ToTime          pgtype.Timestamptz
+	CursorTime      pgtype.Timestamptz
+	CursorID        pgtype.UUID
+	Limit           int32
 }
 
 // LedgerRepo implements LedgerRepository.
