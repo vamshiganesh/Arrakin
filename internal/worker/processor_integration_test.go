@@ -69,16 +69,25 @@ func TestOrchestratorEnqueueIdempotent(t *testing.T) {
 	pool, ctx := testPool(t)
 	_, sched, _ := newTestStack(t, pool)
 
-	first, err := sched.TickOnce(ctx)
-	if err != nil {
+	maturityID := uuid.MustParse("c3000001-0003-4003-8003-000000000001")
+
+	if _, err := sched.TickOnce(ctx); err != nil {
 		t.Fatalf("first tick: %v", err)
 	}
-	second, err := sched.TickOnce(ctx)
+	first, err := getJobByMaturity(ctx, pool, maturityID)
 	if err != nil {
+		t.Fatalf("load job after first tick: %v", err)
+	}
+
+	if _, err := sched.TickOnce(ctx); err != nil {
 		t.Fatalf("second tick: %v", err)
 	}
-	if second != 0 {
-		t.Fatalf("expected no new jobs on second tick, got %d (first=%d)", second, first)
+	second, err := getJobByMaturity(ctx, pool, maturityID)
+	if err != nil {
+		t.Fatalf("load job after second tick: %v", err)
+	}
+	if first.ID != second.ID {
+		t.Fatal("expected same settlement job for maturity on re-tick")
 	}
 }
 
