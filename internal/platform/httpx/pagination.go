@@ -30,7 +30,7 @@ type PageParams struct {
 // ParsePageParams reads limit and cursor from query string.
 // Cursor format: "<RFC3339Nano>|<uuid>".
 func ParsePageParams(c *gin.Context) (PageParams, error) {
-	limit := defaultLimit
+	limit := int32(defaultLimit)
 	if raw := c.Query("limit"); raw != "" {
 		n, err := strconv.Atoi(raw)
 		if err != nil || n <= 0 {
