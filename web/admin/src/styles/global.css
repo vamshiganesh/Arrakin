@@ -422,7 +422,6 @@ code,
   margin-right: 0.25rem;
 }
 
-.filter-bar select,
 .filter-bar input {
   padding: 0.4rem 0.6rem;
   border: 1px solid var(--border-subtle);
