@@ -213,8 +213,8 @@ func TestReconciliationReflectsProcessedVsExpectedTotals(t *testing.T) {
 	successID, _ := store.PgtypeToUUID(successJob.ID)
 	deadID, _ := store.PgtypeToUUID(deadJob.ID)
 
-	ProcessUntilStatus(t, ctx, stack, successID, sqlc.SettlementJobStatusSucceeded, "recon-success", 5*time.Second)
-	ProcessUntilStatus(t, ctx, stack, deadID, sqlc.SettlementJobStatusDeadLetter, "recon-dead", 5*time.Second)
+	ProcessJobUntilStatus(t, ctx, stack, successID, sqlc.SettlementJobStatusSucceeded, "recon-success", 5*time.Second)
+	ProcessJobUntilStatus(t, ctx, stack, deadID, sqlc.SettlementJobStatusDeadLetter, "recon-dead", 5*time.Second)
 
 	expected, succeeded, err := JobPayoutTotals(ctx, pool, []uuid.UUID{successID, deadID})
 	if err != nil {
@@ -322,7 +322,7 @@ func TestTransientProfileEventuallySucceedsWithRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	final := ProcessUntilStatus(t, ctx, stack, jobID, sqlc.SettlementJobStatusSucceeded, "transient-e2e", 10*time.Second)
+	final := ProcessJobUntilStatus(t, ctx, stack, jobID, sqlc.SettlementJobStatusSucceeded, "transient-e2e", 10*time.Second)
 	if final.RetryCount < 2 {
 		t.Fatalf("expected at least 2 retries before success, got retry_count=%d", final.RetryCount)
 	}
