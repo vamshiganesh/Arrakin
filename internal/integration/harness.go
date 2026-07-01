@@ -38,6 +38,7 @@ type Stack struct {
 	Store      *store.Store
 	Scheduler  *scheduler.Scheduler
 	Orch       *orchestrator.Service
+	Calc       *calculator.Service
 	Processor  *worker.Processor
 	Recon      *reconciliation.Service
 	Retry      retry.Policy
@@ -90,6 +91,7 @@ func NewStack(t *testing.T, pool *pgxpool.Pool) *Stack {
 		Store:     st,
 		Scheduler: sched,
 		Orch:      orch,
+		Calc:      calc,
 		Processor: processor,
 		Recon:     reconciliation.New(st.Repos().Reconciliation),
 		Retry:     retryPolicy,
@@ -148,7 +150,7 @@ func CreateJobForFixture(t *testing.T, ctx context.Context, stack *Stack, fix Fi
 		TermDays:       int(investment.TermDays),
 		Currency:       investment.Currency,
 	}
-	breakdown, err := stack.OrchCalc().Calculate(terms)
+	breakdown, err := stack.Calc.Calculate(terms)
 	if err != nil {
 		t.Fatalf("calculate: %v", err)
 	}
@@ -189,8 +191,8 @@ func ProcessJobOnce(t *testing.T, ctx context.Context, stack *Stack, workerID st
 	}
 }
 
-// ProcessUntilStatus polls the worker until the job reaches the target status or times out.
-func ProcessUntilStatus(
+// ProcessJobUntilStatus processes jobs until the target job reaches the desired status.
+func ProcessJobUntilStatus(
 	t *testing.T,
 	ctx context.Context,
 	stack *Stack,
@@ -198,6 +200,9 @@ func ProcessUntilStatus(
 	target sqlc.SettlementJobStatus,
 	workerID string,
 	timeout time.Duration,
+) sqlc.SettlementJob {
+	return ProcessUntilStatus(t, ctx, stack, jobID, target, workerID, timeout)
+}
 ) sqlc.SettlementJob {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
