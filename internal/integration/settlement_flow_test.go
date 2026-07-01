@@ -133,7 +133,7 @@ func TestTerminalFailureGoesToDeadLetter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ProcessJobOnce(t, ctx, stack, "terminal-worker")
+	ProcessJobUntilStatus(t, ctx, stack, jobID, sqlc.SettlementJobStatusDeadLetter, "terminal-worker", 5*time.Second)
 
 	final, err := JobByID(ctx, pool, jobID)
 	if err != nil {
@@ -207,8 +207,8 @@ func TestReconciliationReflectsProcessedVsExpectedTotals(t *testing.T) {
 	successFix := SeedDueMaturity(t, pool, ctx, "success")
 	deadFix := SeedDueMaturity(t, pool, ctx, "terminal_failure")
 
-	successJob := EnqueueMaturity(t, ctx, stack, successFix)
-	deadJob := EnqueueMaturity(t, ctx, stack, deadFix)
+	successJob := CreateJobForFixture(t, ctx, stack, successFix)
+	deadJob := CreateJobForFixture(t, ctx, stack, deadFix)
 
 	successID, _ := store.PgtypeToUUID(successJob.ID)
 	deadID, _ := store.PgtypeToUUID(deadJob.ID)
