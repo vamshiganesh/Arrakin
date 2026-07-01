@@ -89,7 +89,7 @@ func (p *Processor) ProcessOne(ctx context.Context, workerID string) error {
 		})
 
 		if result.Err == nil {
-			return p.completeSuccess(ctx, q, job, attempt, investorID, jobID, result.PayoutReference, workerID)
+			return p.completeSuccess(ctx, q, job, attempt, investorID, jobID, investment.Currency, result.PayoutReference, workerID)
 		}
 
 		return p.handleFailure(ctx, q, job, attempt, jobID, workerID, result)
