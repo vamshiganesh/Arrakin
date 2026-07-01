@@ -307,6 +307,14 @@ code,
 .panel-body.flush {
   padding: 0;
   overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.panel-body.flush::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .stat-grid {
