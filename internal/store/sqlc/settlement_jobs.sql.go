@@ -262,6 +262,77 @@ func (q *Queries) GetSettlementJobByMaturityScheduleID(ctx context.Context, matu
 	return i, err
 }
 
+const listSettlementJobs = `-- name: ListSettlementJobs :many
+SELECT id, maturity_schedule_id, investment_id, idempotency_key, status, principal_cents, gross_return_cents, platform_fee_cents, withholding_tax_cents, net_payout_cents, payout_reference, retry_count, max_retries, next_retry_at, processing_started_at, processing_owner, last_error, error_class, dead_letter_reason, created_at, updated_at, completed_at
+FROM settlement_jobs
+WHERE ($1::settlement_job_status IS NULL OR status = $1)
+  AND ($2::uuid IS NULL OR investment_id = $2)
+  AND (
+    $3::timestamptz IS NULL
+    OR created_at < $3
+    OR (created_at = $3 AND id < $4)
+  )
+ORDER BY created_at DESC, id DESC
+LIMIT $5
+`
+
+type ListSettlementJobsParams struct {
+	Status       *SettlementJobStatus `json:"status"`
+	InvestmentID pgtype.UUID          `json:"investment_id"`
+	CursorTime   pgtype.Timestamptz   `json:"cursor_time"`
+	CursorID     pgtype.UUID          `json:"cursor_id"`
+	LimitVal     int32                `json:"limit_val"`
+}
+
+func (q *Queries) ListSettlementJobs(ctx context.Context, arg ListSettlementJobsParams) ([]SettlementJob, error) {
+	rows, err := q.db.Query(ctx, listSettlementJobs,
+		arg.Status,
+		arg.InvestmentID,
+		arg.CursorTime,
+		arg.CursorID,
+		arg.LimitVal,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SettlementJob{}
+	for rows.Next() {
+		var i SettlementJob
+		if err := rows.Scan(
+			&i.ID,
+			&i.MaturityScheduleID,
+			&i.InvestmentID,
+			&i.IdempotencyKey,
+			&i.Status,
+			&i.PrincipalCents,
+			&i.GrossReturnCents,
+			&i.PlatformFeeCents,
+			&i.WithholdingTaxCents,
+			&i.NetPayoutCents,
+			&i.PayoutReference,
+			&i.RetryCount,
+			&i.MaxRetries,
+			&i.NextRetryAt,
+			&i.ProcessingStartedAt,
+			&i.ProcessingOwner,
+			&i.LastError,
+			&i.ErrorClass,
+			&i.DeadLetterReason,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CompletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markJobDeadLetter = `-- name: MarkJobDeadLetter :one
 UPDATE settlement_jobs
 SET
@@ -440,6 +511,49 @@ RETURNING id, maturity_schedule_id, investment_id, idempotency_key, status, prin
 
 func (q *Queries) ReplayDeadLetterJob(ctx context.Context, id pgtype.UUID) (SettlementJob, error) {
 	row := q.db.QueryRow(ctx, replayDeadLetterJob, id)
+	var i SettlementJob
+	err := row.Scan(
+		&i.ID,
+		&i.MaturityScheduleID,
+		&i.InvestmentID,
+		&i.IdempotencyKey,
+		&i.Status,
+		&i.PrincipalCents,
+		&i.GrossReturnCents,
+		&i.PlatformFeeCents,
+		&i.WithholdingTaxCents,
+		&i.NetPayoutCents,
+		&i.PayoutReference,
+		&i.RetryCount,
+		&i.MaxRetries,
+		&i.NextRetryAt,
+		&i.ProcessingStartedAt,
+		&i.ProcessingOwner,
+		&i.LastError,
+		&i.ErrorClass,
+		&i.DeadLetterReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
+const requeueFailedJob = `-- name: RequeueFailedJob :one
+UPDATE settlement_jobs
+SET
+    status = 'pending',
+    next_retry_at = NULL,
+    processing_started_at = NULL,
+    processing_owner = NULL,
+    updated_at = now()
+WHERE id = $1
+  AND status = 'failed'
+RETURNING id, maturity_schedule_id, investment_id, idempotency_key, status, principal_cents, gross_return_cents, platform_fee_cents, withholding_tax_cents, net_payout_cents, payout_reference, retry_count, max_retries, next_retry_at, processing_started_at, processing_owner, last_error, error_class, dead_letter_reason, created_at, updated_at, completed_at
+`
+
+func (q *Queries) RequeueFailedJob(ctx context.Context, id pgtype.UUID) (SettlementJob, error) {
+	row := q.db.QueryRow(ctx, requeueFailedJob, id)
 	var i SettlementJob
 	err := row.Scan(
 		&i.ID,

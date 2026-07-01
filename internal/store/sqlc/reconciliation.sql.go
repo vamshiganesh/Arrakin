@@ -7,6 +7,8 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const aggregateSettlementJobStats = `-- name: AggregateSettlementJobStats :one
@@ -47,6 +49,57 @@ func (q *Queries) AggregateSettlementJobStats(ctx context.Context) (AggregateSet
 		&i.SucceededTotalCents,
 	)
 	return i, err
+}
+
+const countOrphanLedgerJobGroups = `-- name: CountOrphanLedgerJobGroups :one
+SELECT COUNT(*)::int AS count
+FROM (
+    SELECT DISTINCT le.settlement_job_id
+    FROM ledger_entries le
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM settlement_jobs j
+        WHERE j.id = le.settlement_job_id
+          AND j.status = 'succeeded'
+    )
+) orphan_groups
+`
+
+func (q *Queries) CountOrphanLedgerJobGroups(ctx context.Context) (int32, error) {
+	row := q.db.QueryRow(ctx, countOrphanLedgerJobGroups)
+	var count int32
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countStalePendingJobs = `-- name: CountStalePendingJobs :one
+SELECT COUNT(*)::int AS count
+FROM settlement_jobs
+WHERE status = 'pending'
+  AND created_at < (now() - interval '1 hour')
+`
+
+func (q *Queries) CountStalePendingJobs(ctx context.Context) (int32, error) {
+	row := q.db.QueryRow(ctx, countStalePendingJobs)
+	var count int32
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countSucceededJobsWithoutLedger = `-- name: CountSucceededJobsWithoutLedger :one
+SELECT COUNT(*)::int AS count
+FROM settlement_jobs j
+WHERE j.status = 'succeeded'
+  AND NOT EXISTS (
+    SELECT 1 FROM ledger_entries le WHERE le.settlement_job_id = j.id
+  )
+`
+
+func (q *Queries) CountSucceededJobsWithoutLedger(ctx context.Context) (int32, error) {
+	row := q.db.QueryRow(ctx, countSucceededJobsWithoutLedger)
+	var count int32
+	err := row.Scan(&count)
+	return count, err
 }
 
 const createReconciliationSnapshot = `-- name: CreateReconciliationSnapshot :one
@@ -130,4 +183,54 @@ func (q *Queries) GetLatestReconciliationSnapshot(ctx context.Context) (Reconcil
 		&i.Details,
 	)
 	return i, err
+}
+
+const listReconciliationSnapshots = `-- name: ListReconciliationSnapshots :many
+SELECT id, snapshot_at, expected_job_count, expected_total_cents, succeeded_count, succeeded_total_cents, pending_count, failed_count, dead_letter_count, discrepancy_cents, details
+FROM reconciliation_snapshots
+WHERE (
+    $1::timestamptz IS NULL
+    OR snapshot_at < $1
+    OR (snapshot_at = $1 AND id < $2)
+)
+ORDER BY snapshot_at DESC, id DESC
+LIMIT $3
+`
+
+type ListReconciliationSnapshotsParams struct {
+	CursorTime pgtype.Timestamptz `json:"cursor_time"`
+	CursorID   pgtype.UUID        `json:"cursor_id"`
+	LimitVal   int32              `json:"limit_val"`
+}
+
+func (q *Queries) ListReconciliationSnapshots(ctx context.Context, arg ListReconciliationSnapshotsParams) ([]ReconciliationSnapshot, error) {
+	rows, err := q.db.Query(ctx, listReconciliationSnapshots, arg.CursorTime, arg.CursorID, arg.LimitVal)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ReconciliationSnapshot{}
+	for rows.Next() {
+		var i ReconciliationSnapshot
+		if err := rows.Scan(
+			&i.ID,
+			&i.SnapshotAt,
+			&i.ExpectedJobCount,
+			&i.ExpectedTotalCents,
+			&i.SucceededCount,
+			&i.SucceededTotalCents,
+			&i.PendingCount,
+			&i.FailedCount,
+			&i.DeadLetterCount,
+			&i.DiscrepancyCents,
+			&i.Details,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

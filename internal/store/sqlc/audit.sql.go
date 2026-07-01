@@ -60,6 +60,67 @@ func (q *Queries) CreateAuditEvent(ctx context.Context, arg CreateAuditEventPara
 	return i, err
 }
 
+const listAuditEvents = `-- name: ListAuditEvents :many
+SELECT id, occurred_at, actor_type, actor_id, action, entity_type, entity_id, payload, correlation_id
+FROM audit_events
+WHERE ($1::text IS NULL OR entity_type = $1)
+  AND ($2::uuid IS NULL OR entity_id = $2)
+  AND ($3::text IS NULL OR action = $3)
+  AND (
+    $4::timestamptz IS NULL
+    OR occurred_at < $4
+    OR (occurred_at = $4 AND id < $5)
+  )
+ORDER BY occurred_at DESC, id DESC
+LIMIT $6
+`
+
+type ListAuditEventsParams struct {
+	EntityType *string            `json:"entity_type"`
+	EntityID   pgtype.UUID        `json:"entity_id"`
+	Action     *string            `json:"action"`
+	CursorTime pgtype.Timestamptz `json:"cursor_time"`
+	CursorID   pgtype.UUID        `json:"cursor_id"`
+	LimitVal   int32              `json:"limit_val"`
+}
+
+func (q *Queries) ListAuditEvents(ctx context.Context, arg ListAuditEventsParams) ([]AuditEvent, error) {
+	rows, err := q.db.Query(ctx, listAuditEvents,
+		arg.EntityType,
+		arg.EntityID,
+		arg.Action,
+		arg.CursorTime,
+		arg.CursorID,
+		arg.LimitVal,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AuditEvent{}
+	for rows.Next() {
+		var i AuditEvent
+		if err := rows.Scan(
+			&i.ID,
+			&i.OccurredAt,
+			&i.ActorType,
+			&i.ActorID,
+			&i.Action,
+			&i.EntityType,
+			&i.EntityID,
+			&i.Payload,
+			&i.CorrelationID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAuditEventsByEntity = `-- name: ListAuditEventsByEntity :many
 SELECT id, occurred_at, actor_type, actor_id, action, entity_type, entity_id, payload, correlation_id
 FROM audit_events

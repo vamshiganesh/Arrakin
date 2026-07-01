@@ -30,3 +30,41 @@ SELECT *
 FROM reconciliation_snapshots
 ORDER BY snapshot_at DESC
 LIMIT 1;
+
+-- name: ListReconciliationSnapshots :many
+SELECT *
+FROM reconciliation_snapshots
+WHERE (
+    sqlc.narg('cursor_time')::timestamptz IS NULL
+    OR snapshot_at < sqlc.narg('cursor_time')
+    OR (snapshot_at = sqlc.narg('cursor_time') AND id < sqlc.narg('cursor_id'))
+)
+ORDER BY snapshot_at DESC, id DESC
+LIMIT sqlc.arg('limit_val');
+
+-- name: CountSucceededJobsWithoutLedger :one
+SELECT COUNT(*)::int AS count
+FROM settlement_jobs j
+WHERE j.status = 'succeeded'
+  AND NOT EXISTS (
+    SELECT 1 FROM ledger_entries le WHERE le.settlement_job_id = j.id
+  );
+
+-- name: CountOrphanLedgerJobGroups :one
+SELECT COUNT(*)::int AS count
+FROM (
+    SELECT DISTINCT le.settlement_job_id
+    FROM ledger_entries le
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM settlement_jobs j
+        WHERE j.id = le.settlement_job_id
+          AND j.status = 'succeeded'
+    )
+) orphan_groups;
+
+-- name: CountStalePendingJobs :one
+SELECT COUNT(*)::int AS count
+FROM settlement_jobs
+WHERE status = 'pending'
+  AND created_at < (now() - interval '1 hour');

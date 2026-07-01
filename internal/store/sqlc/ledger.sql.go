@@ -97,6 +97,104 @@ func (q *Queries) InsertLedgerEntry(ctx context.Context, arg InsertLedgerEntryPa
 	return i, err
 }
 
+const listLedgerAccounts = `-- name: ListLedgerAccounts :many
+SELECT id, code, name, account_type, created_at
+FROM ledger_accounts
+ORDER BY code ASC
+`
+
+func (q *Queries) ListLedgerAccounts(ctx context.Context) ([]LedgerAccount, error) {
+	rows, err := q.db.Query(ctx, listLedgerAccounts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LedgerAccount{}
+	for rows.Next() {
+		var i LedgerAccount
+		if err := rows.Scan(
+			&i.ID,
+			&i.Code,
+			&i.Name,
+			&i.AccountType,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLedgerEntries = `-- name: ListLedgerEntries :many
+SELECT le.id, le.entry_group_id, le.settlement_job_id, le.account_id, le.side, le.amount_cents, le.currency, le.description, le.posted_at, le.metadata
+FROM ledger_entries le
+JOIN ledger_accounts la ON la.id = le.account_id
+WHERE ($1::uuid IS NULL OR le.settlement_job_id = $1)
+  AND ($2::text IS NULL OR la.code = $2)
+  AND ($3::timestamptz IS NULL OR le.posted_at >= $3)
+  AND ($4::timestamptz IS NULL OR le.posted_at <= $4)
+  AND (
+    $5::timestamptz IS NULL
+    OR le.posted_at < $5
+    OR (le.posted_at = $5 AND le.id < $6)
+  )
+ORDER BY le.posted_at DESC, le.id DESC
+LIMIT $7
+`
+
+type ListLedgerEntriesParams struct {
+	SettlementJobID pgtype.UUID        `json:"settlement_job_id"`
+	AccountCode     *string            `json:"account_code"`
+	FromTime        pgtype.Timestamptz `json:"from_time"`
+	ToTime          pgtype.Timestamptz `json:"to_time"`
+	CursorTime      pgtype.Timestamptz `json:"cursor_time"`
+	CursorID        pgtype.UUID        `json:"cursor_id"`
+	LimitVal        int32              `json:"limit_val"`
+}
+
+func (q *Queries) ListLedgerEntries(ctx context.Context, arg ListLedgerEntriesParams) ([]LedgerEntry, error) {
+	rows, err := q.db.Query(ctx, listLedgerEntries,
+		arg.SettlementJobID,
+		arg.AccountCode,
+		arg.FromTime,
+		arg.ToTime,
+		arg.CursorTime,
+		arg.CursorID,
+		arg.LimitVal,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LedgerEntry{}
+	for rows.Next() {
+		var i LedgerEntry
+		if err := rows.Scan(
+			&i.ID,
+			&i.EntryGroupID,
+			&i.SettlementJobID,
+			&i.AccountID,
+			&i.Side,
+			&i.AmountCents,
+			&i.Currency,
+			&i.Description,
+			&i.PostedAt,
+			&i.Metadata,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listLedgerEntriesByJobID = `-- name: ListLedgerEntriesByJobID :many
 SELECT id, entry_group_id, settlement_job_id, account_id, side, amount_cents, currency, description, posted_at, metadata
 FROM ledger_entries

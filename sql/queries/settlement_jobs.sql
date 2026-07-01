@@ -3,6 +3,31 @@ SELECT *
 FROM settlement_jobs
 WHERE id = $1;
 
+-- name: ListSettlementJobs :many
+SELECT *
+FROM settlement_jobs
+WHERE (sqlc.narg('status')::settlement_job_status IS NULL OR status = sqlc.narg('status'))
+  AND (sqlc.narg('investment_id')::uuid IS NULL OR investment_id = sqlc.narg('investment_id'))
+  AND (
+    sqlc.narg('cursor_time')::timestamptz IS NULL
+    OR created_at < sqlc.narg('cursor_time')
+    OR (created_at = sqlc.narg('cursor_time') AND id < sqlc.narg('cursor_id'))
+  )
+ORDER BY created_at DESC, id DESC
+LIMIT sqlc.arg('limit_val');
+
+-- name: RequeueFailedJob :one
+UPDATE settlement_jobs
+SET
+    status = 'pending',
+    next_retry_at = NULL,
+    processing_started_at = NULL,
+    processing_owner = NULL,
+    updated_at = now()
+WHERE id = $1
+  AND status = 'failed'
+RETURNING *;
+
 -- name: GetSettlementJobByMaturityScheduleID :one
 SELECT *
 FROM settlement_jobs
