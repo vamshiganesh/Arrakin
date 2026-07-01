@@ -30,7 +30,7 @@ func (PayoutAttemptRepo) Start(ctx context.Context, q *sqlc.Queries, jobID pgtyp
 
 	attempt, err := q.CreatePayoutAttempt(ctx, sqlc.CreatePayoutAttemptParams{
 		SettlementJobID: jobID,
-		AttemptNumber:   next.NextAttemptNumber,
+		AttemptNumber:   next,
 	})
 	if err != nil {
 		return sqlc.PayoutAttempt{}, fmt.Errorf("create payout attempt: %w", err)

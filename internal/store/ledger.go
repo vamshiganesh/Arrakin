@@ -48,7 +48,11 @@ func (LedgerRepo) GetEntryGroupID(ctx context.Context, q *sqlc.Queries, jobID pg
 func (LedgerRepo) PostEntries(ctx context.Context, q *sqlc.Queries, jobID, entryGroupID pgtype.UUID, lines []LedgerLineInput) ([]sqlc.LedgerEntry, error) {
 	existing, err := q.GetLedgerEntryGroupIDByJobID(ctx, jobID)
 	if err == nil {
-		return nil, fmt.Errorf("%w: group %s", ErrLedgerAlreadyPosted, existing.Bytes)
+		id, convErr := PgtypeToUUID(existing)
+		if convErr != nil {
+			return nil, convErr
+		}
+		return nil, fmt.Errorf("%w: group %s", ErrLedgerAlreadyPosted, id)
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("check existing ledger posting: %w", err)

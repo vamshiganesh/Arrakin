@@ -3,9 +3,10 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5"
 	"github.com/vamshiganesh/arrakin/internal/store/sqlc"
 )
 
@@ -59,17 +60,10 @@ func (ReconciliationRepo) CreateSnapshot(ctx context.Context, q *sqlc.Queries) (
 func (ReconciliationRepo) GetLatest(ctx context.Context, q *sqlc.Queries) (sqlc.ReconciliationSnapshot, error) {
 	snapshot, err := q.GetLatestReconciliationSnapshot(ctx)
 	if err != nil {
-		return sqlc.ReconciliationSnapshot{}, mapNotFound(err, "get latest reconciliation snapshot")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return sqlc.ReconciliationSnapshot{}, ErrNotFound
+		}
+		return sqlc.ReconciliationSnapshot{}, fmt.Errorf("get latest reconciliation snapshot: %w", err)
 	}
 	return snapshot, nil
-}
-
-func mapNotFound(err error, action string) error {
-	if err == nil {
-		return nil
-	}
-	if err.Error() == "no rows in result set" {
-		return ErrNotFound
-	}
-	return fmt.Errorf("%s: %w", action, err)
 }
