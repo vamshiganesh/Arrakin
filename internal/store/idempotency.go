@@ -49,7 +49,7 @@ func (IdempotencyRepo) Reserve(ctx context.Context, q *sqlc.Queries, params Rese
 	row, err := q.CreateIdempotencyKey(ctx, sqlc.CreateIdempotencyKeyParams{
 		Key:         params.Key,
 		Scope:       params.Scope,
-		RequestHash: params.RequestHash,
+		RequestHash: TextPtr(params.RequestHash),
 		ExpiresAt:   pgtype.Timestamptz{Time: params.ExpiresAt, Valid: true},
 	})
 	if err != nil {
@@ -66,7 +66,7 @@ func (IdempotencyRepo) Complete(ctx context.Context, q *sqlc.Queries, scope, key
 	row, err := q.CompleteIdempotencyKey(ctx, sqlc.CompleteIdempotencyKeyParams{
 		Scope:          scope,
 		Key:            key,
-		ResponseStatus: pgtype.Int4{Int32: status, Valid: true},
+		ResponseStatus: Int32Ptr(status),
 		ResponseBody:   body,
 	})
 	if err != nil {

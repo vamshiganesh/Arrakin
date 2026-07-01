@@ -71,7 +71,7 @@ func (SettlementJobRepo) CreateIdempotent(ctx context.Context, q *sqlc.Queries, 
 
 // Claim atomically leases the next eligible settlement job for a worker.
 func (SettlementJobRepo) Claim(ctx context.Context, q *sqlc.Queries, workerID string) (sqlc.SettlementJob, error) {
-	job, err := q.ClaimSettlementJob(ctx, workerID)
+	job, err := q.ClaimSettlementJob(ctx, StringPtr(workerID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return sqlc.SettlementJob{}, ErrNoJobAvailable
@@ -85,7 +85,7 @@ func (SettlementJobRepo) Claim(ctx context.Context, q *sqlc.Queries, workerID st
 func (SettlementJobRepo) MarkSucceeded(ctx context.Context, q *sqlc.Queries, jobID pgtype.UUID, payoutReference string) (sqlc.SettlementJob, error) {
 	job, err := q.MarkJobSucceeded(ctx, sqlc.MarkJobSucceededParams{
 		ID:              jobID,
-		PayoutReference: pgtype.Text{String: payoutReference, Valid: true},
+		PayoutReference: StringPtr(payoutReference),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -101,7 +101,7 @@ func (SettlementJobRepo) MarkFailedRetryable(ctx context.Context, q *sqlc.Querie
 	job, err := q.MarkJobFailedRetryable(ctx, sqlc.MarkJobFailedRetryableParams{
 		ID:          jobID,
 		NextRetryAt: pgtype.Timestamptz{Time: nextRetryAt, Valid: true},
-		LastError:   pgtype.Text{String: lastError, Valid: true},
+		LastError:   StringPtr(lastError),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -116,9 +116,9 @@ func (SettlementJobRepo) MarkFailedRetryable(ctx context.Context, q *sqlc.Querie
 func (SettlementJobRepo) MarkDeadLetter(ctx context.Context, q *sqlc.Queries, jobID pgtype.UUID, reason, lastError string, class sqlc.ErrorClass) (sqlc.SettlementJob, error) {
 	job, err := q.MarkJobDeadLetter(ctx, sqlc.MarkJobDeadLetterParams{
 		ID:               jobID,
-		DeadLetterReason: pgtype.Text{String: reason, Valid: true},
-		LastError:        pgtype.Text{String: lastError, Valid: true},
-		ErrorClass:       sqlc.NullErrorClass{ErrorClass: class, Valid: true},
+		DeadLetterReason: StringPtr(reason),
+		LastError:        StringPtr(lastError),
+		ErrorClass:       ErrorClassPtr(class),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

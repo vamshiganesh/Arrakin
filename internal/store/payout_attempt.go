@@ -42,7 +42,7 @@ func (PayoutAttemptRepo) Start(ctx context.Context, q *sqlc.Queries, jobID pgtyp
 func (PayoutAttemptRepo) MarkSucceeded(ctx context.Context, q *sqlc.Queries, attemptID pgtype.UUID, payoutReference string) (sqlc.PayoutAttempt, error) {
 	attempt, err := q.FinishPayoutAttemptSuccess(ctx, sqlc.FinishPayoutAttemptSuccessParams{
 		ID:              attemptID,
-		PayoutReference: pgtype.Text{String: payoutReference, Valid: true},
+		PayoutReference: StringPtr(payoutReference),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -57,8 +57,8 @@ func (PayoutAttemptRepo) MarkSucceeded(ctx context.Context, q *sqlc.Queries, att
 func (PayoutAttemptRepo) MarkFailed(ctx context.Context, q *sqlc.Queries, attemptID pgtype.UUID, message string, class sqlc.ErrorClass) (sqlc.PayoutAttempt, error) {
 	attempt, err := q.FinishPayoutAttemptFailure(ctx, sqlc.FinishPayoutAttemptFailureParams{
 		ID:           attemptID,
-		ErrorMessage: pgtype.Text{String: message, Valid: true},
-		ErrorClass:   sqlc.NullErrorClass{ErrorClass: class, Valid: true},
+		ErrorMessage: StringPtr(message),
+		ErrorClass:   ErrorClassPtr(class),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
