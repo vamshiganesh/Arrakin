@@ -25,6 +25,17 @@ type AuditEventInput struct {
 type AuditRepository interface {
 	Record(ctx context.Context, q *sqlc.Queries, input AuditEventInput) (sqlc.AuditEvent, error)
 	ListByEntity(ctx context.Context, q *sqlc.Queries, entityType string, entityID pgtype.UUID, limit int32) ([]sqlc.AuditEvent, error)
+	List(ctx context.Context, q *sqlc.Queries, filter ListAuditEventsFilter) ([]sqlc.AuditEvent, error)
+}
+
+// ListAuditEventsFilter controls audit event list queries.
+type ListAuditEventsFilter struct {
+	EntityType *string
+	EntityID   pgtype.UUID
+	Action     *string
+	CursorTime pgtype.Timestamptz
+	CursorID   pgtype.UUID
+	Limit      int32
 }
 
 // AuditRepo implements AuditRepository.

@@ -32,8 +32,20 @@ type SettlementJobRepository interface {
 	MarkFailedRetryable(ctx context.Context, q *sqlc.Queries, jobID pgtype.UUID, nextRetryAt time.Time, lastError string) (sqlc.SettlementJob, error)
 	MarkDeadLetter(ctx context.Context, q *sqlc.Queries, jobID pgtype.UUID, reason, lastError string, class sqlc.ErrorClass) (sqlc.SettlementJob, error)
 	ReplayDeadLetter(ctx context.Context, q *sqlc.Queries, jobID pgtype.UUID) (sqlc.SettlementJob, error)
+	RequeueFailed(ctx context.Context, q *sqlc.Queries, jobID pgtype.UUID) (sqlc.SettlementJob, error)
 	ExpireStaleLeases(ctx context.Context, q *sqlc.Queries, olderThan time.Time) ([]sqlc.SettlementJob, error)
+	GetByID(ctx context.Context, q *sqlc.Queries, jobID pgtype.UUID) (sqlc.SettlementJob, error)
 	GetByMaturityScheduleID(ctx context.Context, q *sqlc.Queries, maturityScheduleID pgtype.UUID) (sqlc.SettlementJob, error)
+	List(ctx context.Context, q *sqlc.Queries, filter ListSettlementJobsFilter) ([]sqlc.SettlementJob, error)
+}
+
+// ListSettlementJobsFilter controls settlement job list queries.
+type ListSettlementJobsFilter struct {
+	Status       *sqlc.SettlementJobStatus
+	InvestmentID pgtype.UUID
+	CursorTime   pgtype.Timestamptz
+	CursorID     pgtype.UUID
+	Limit        int32
 }
 
 // SettlementJobRepo implements SettlementJobRepository.
@@ -162,6 +174,55 @@ func (SettlementJobRepo) GetByMaturityScheduleID(ctx context.Context, q *sqlc.Qu
 			return sqlc.SettlementJob{}, ErrNotFound
 		}
 		return sqlc.SettlementJob{}, fmt.Errorf("get settlement job: %w", err)
+	}
+	return job, nil
+}
+
+// GetByID fetches a settlement job by primary key.
+func (SettlementJobRepo) GetByID(ctx context.Context, q *sqlc.Queries, jobID pgtype.UUID) (sqlc.SettlementJob, error) {
+	job, err := q.GetSettlementJobByID(ctx, jobID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return sqlc.SettlementJob{}, ErrNotFound
+		}
+		return sqlc.SettlementJob{}, fmt.Errorf("get settlement job by id: %w", err)
+	}
+	return job, nil
+}
+
+// List returns settlement jobs matching optional filters with cursor pagination.
+func (SettlementJobRepo) List(ctx context.Context, q *sqlc.Queries, filter ListSettlementJobsFilter) ([]sqlc.SettlementJob, error) {
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+
+	params := sqlc.ListSettlementJobsParams{
+		Status:       filter.Status,
+		InvestmentID: filter.InvestmentID,
+		CursorTime:   filter.CursorTime,
+		CursorID:     filter.CursorID,
+		LimitVal:     limit,
+	}
+
+	jobs, err := q.ListSettlementJobs(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("list settlement jobs: %w", err)
+	}
+	return jobs, nil
+}
+
+// RequeueFailed moves a failed job back to pending for immediate worker pickup.
+func (SettlementJobRepo) RequeueFailed(ctx context.Context, q *sqlc.Queries, jobID pgtype.UUID) (sqlc.SettlementJob, error) {
+	job, err := q.RequeueFailedJob(ctx, jobID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return sqlc.SettlementJob{}, ErrConflict
+		}
+		return sqlc.SettlementJob{}, fmt.Errorf("requeue failed job: %w", err)
 	}
 	return job, nil
 }
