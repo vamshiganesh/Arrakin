@@ -36,11 +36,19 @@ func testStore(t *testing.T) (*store.Store, context.Context) {
 }
 
 func demoMaturityID() uuid.UUID {
-	return uuid.MustParse("c3000001-0003-4003-8003-000000000001")
+	return uuid.MustParse("c3000001-0003-4003-8003-000000000004")
 }
 
 func demoInvestmentID() uuid.UUID {
-	return uuid.MustParse("b2000001-0002-4002-8002-000000000001")
+	return uuid.MustParse("b2000001-0002-4002-8002-000000000004")
+}
+
+func demoMaturityIDForClaim() uuid.UUID {
+	return uuid.MustParse("c3000001-0003-4003-8003-000000000005")
+}
+
+func demoInvestmentIDForClaim() uuid.UUID {
+	return uuid.MustParse("b2000001-0002-4002-8002-000000000005")
 }
 
 func TestCreateSettlementJobIdempotent(t *testing.T) {
@@ -91,15 +99,8 @@ func TestClaimSettlementJob(t *testing.T) {
 	repos := s.Repos()
 
 	err := s.WithTx(ctx, func(ctx context.Context, q *sqlc.Queries) error {
-		maturityID := store.UUIDToPgtype(uuid.New())
-		investmentID := store.UUIDToPgtype(demoInvestmentID())
-
-		if _, err := s.Pool().Exec(ctx, `
-			INSERT INTO maturity_schedules (id, investment_id, matures_at, status)
-			VALUES ($1, $2, now() - interval '1 hour', 'pending')
-		`, maturityID, investmentID); err != nil {
-			t.Fatalf("insert maturity: %v", err)
-		}
+		maturityID := store.UUIDToPgtype(demoMaturityIDForClaim())
+		investmentID := store.UUIDToPgtype(demoInvestmentIDForClaim())
 
 		_, created, err := repos.SettlementJobs.CreateIdempotent(ctx, q, store.CreateJobParams{
 			MaturityScheduleID: maturityID,

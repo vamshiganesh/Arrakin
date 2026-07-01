@@ -41,6 +41,14 @@ type SettlementJobRepo struct{}
 
 // CreateIdempotent inserts a settlement job or returns the existing row for the maturity.
 func (SettlementJobRepo) CreateIdempotent(ctx context.Context, q *sqlc.Queries, params CreateJobParams) (sqlc.SettlementJob, bool, error) {
+	existing, err := q.GetSettlementJobByMaturityScheduleID(ctx, params.MaturityScheduleID)
+	if err == nil {
+		return existing, false, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return sqlc.SettlementJob{}, false, fmt.Errorf("get settlement job before create: %w", err)
+	}
+
 	job, err := q.CreateSettlementJob(ctx, sqlc.CreateSettlementJobParams{
 		MaturityScheduleID:  params.MaturityScheduleID,
 		InvestmentID:        params.InvestmentID,
@@ -52,21 +60,17 @@ func (SettlementJobRepo) CreateIdempotent(ctx context.Context, q *sqlc.Queries, 
 		NetPayoutCents:      params.NetPayoutCents,
 		MaxRetries:          params.MaxRetries,
 	})
-	if err == nil {
-		return job, true, nil
-	}
-	if !isUniqueViolation(err) {
+	if err != nil {
+		if isUniqueViolation(err) {
+			existing, getErr := q.GetSettlementJobByMaturityScheduleID(ctx, params.MaturityScheduleID)
+			if getErr != nil {
+				return sqlc.SettlementJob{}, false, fmt.Errorf("get settlement job after conflict: %w", getErr)
+			}
+			return existing, false, nil
+		}
 		return sqlc.SettlementJob{}, false, fmt.Errorf("create settlement job: %w", err)
 	}
-
-	existing, err := q.GetSettlementJobByMaturityScheduleID(ctx, params.MaturityScheduleID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return sqlc.SettlementJob{}, false, fmt.Errorf("create settlement job: %w", err)
-		}
-		return sqlc.SettlementJob{}, false, fmt.Errorf("get settlement job after conflict: %w", err)
-	}
-	return existing, false, nil
+	return job, true, nil
 }
 
 // Claim atomically leases the next eligible settlement job for a worker.
