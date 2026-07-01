@@ -1,4 +1,4 @@
-.PHONY: help build run test test-integration demo verify sqlc migrate-up migrate-down migrate-create seed docker-up docker-down docker-logs tidy fmt vet lint swagger admin-dev admin-build
+.PHONY: help build run test test-integration demo verify setup sqlc migrate-up migrate-down migrate-create seed wait-postgres docker-up docker-down docker-logs tidy fmt vet lint swagger admin-dev admin-build
 
 APP_NAME := arrakin
 CMD_DIR := ./cmd/arrakin
@@ -9,9 +9,10 @@ SEED_FILE := seeds/001_demo_data.sql
 
 help:
 	@echo "Arrakin development targets:"
-	@echo "  make docker-up     Start Postgres and Redis"
+	@echo "  make setup         Docker up, wait for Postgres, migrate, seed"
+	@echo "  make docker-up     Start Postgres and Redis (waits until healthy)"
 	@echo "  make docker-down   Stop infrastructure containers"
-	@echo "  make migrate-up    Apply database migrations"
+	@echo "  make migrate-up    Apply database migrations (waits for Postgres)"
 	@echo "  make migrate-down  Roll back last migration"
 	@echo "  make seed          Load idempotent demo seed data"
 	@echo "  make sqlc          Generate sqlc store code"
@@ -56,13 +57,28 @@ sqlc:
 swagger:
 	swag init -g cmd/arrakin/main.go -o docs --parseDependency --parseInternal
 
-migrate-up:
+wait-postgres:
+	@echo "Waiting for Postgres at localhost:5432..."
+	@for i in $$(seq 1 60); do \
+		if docker exec arrakin-postgres pg_isready -U arrakin -d arrakin >/dev/null 2>&1; then \
+			echo "Postgres is ready."; \
+			exit 0; \
+		fi; \
+		sleep 1; \
+	done; \
+	echo "error: Postgres not ready after 60s (is make docker-up running?)" >&2; \
+	exit 1
+
+setup: docker-up migrate-up seed
+	@echo "Setup complete. Start the API with: make run"
+
+migrate-up: wait-postgres
 	migrate -path migrations -database "$(DATABASE_URL)" up
 
-migrate-down:
+migrate-down: wait-postgres
 	migrate -path migrations -database "$(DATABASE_URL)" down 1
 
-seed:
+seed: wait-postgres
 	psql "$(DATABASE_URL)" -v ON_ERROR_STOP=1 -f $(SEED_FILE)
 
 migrate-create:
@@ -70,7 +86,7 @@ migrate-create:
 	migrate create -ext sql -dir migrations -seq $$name
 
 docker-up:
-	docker compose up -d
+	docker compose up -d --wait
 
 docker-down:
 	docker compose down
