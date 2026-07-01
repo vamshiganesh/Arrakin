@@ -1,0 +1,38 @@
+# Binaries
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go
+*.test
+*.out
+coverage.out
+coverage.html
+vendor/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (admin UI, later phases)
+web/admin/node_modules/
+web/admin/dist/
+
+# sqlc / build artifacts
+*.log
