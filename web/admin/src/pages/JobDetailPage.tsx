@@ -171,8 +171,8 @@ export function JobDetailPage() {
                       <StatusBadge status={a.status} />
                     </td>
                     <td>{formatDateTime(a.started_at)}</td>
-                    <td>{a.finished_at ? formatDateTime(a.finished_at) : '—'}</td>
-                    <td style={{ fontSize: 12 }}>{a.error_message ?? '—'}</td>
+                    <td>{a.finished_at ? formatDateTime(a.finished_at) : 'n/a'}</td>
+                    <td style={{ fontSize: 12 }}>{a.error_message ?? 'n/a'}</td>
                   </tr>
                 ))}
               </tbody>

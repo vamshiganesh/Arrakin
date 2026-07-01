@@ -182,7 +182,7 @@ export function ReconciliationPage() {
                     <td>{formatMoney(row.summary.expected_total_cents)}</td>
                     <td>{formatMoney(row.summary.succeeded_total_cents)}</td>
                     <td>{formatMoney(row.summary.discrepancy_cents)}</td>
-                    <td>{row.flags.length ? row.flags.join(', ') : '—'}</td>
+                    <td>{row.flags.length ? row.flags.join(', ') : 'n/a'}</td>
                   </tr>
                 ))}
               </tbody>

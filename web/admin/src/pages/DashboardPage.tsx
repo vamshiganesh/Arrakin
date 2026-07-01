@@ -91,14 +91,14 @@ export function DashboardPage() {
         <div className="stat-card">
           <div className="label">Succeeded volume</div>
           <div className="value">
-            {recon ? formatMoney(recon.summary.succeeded_total_cents) : '—'}
+            {recon ? formatMoney(recon.summary.succeeded_total_cents) : 'n/a'}
           </div>
           <div className="sub">{byStatus.succeeded ?? 0} completed jobs</div>
         </div>
         <div className="stat-card">
           <div className="label">Discrepancy</div>
           <div className="value" style={{ color: recon && recon.summary.discrepancy_cents > 0 ? 'var(--status-dead)' : undefined }}>
-            {recon ? formatMoney(recon.summary.discrepancy_cents) : '—'}
+            {recon ? formatMoney(recon.summary.discrepancy_cents) : 'n/a'}
           </div>
           <div className="sub">Expected minus settled</div>
         </div>
