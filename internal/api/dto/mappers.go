@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/vamshiganesh/arrakin/internal/store"
 	"github.com/vamshiganesh/arrakin/internal/store/sqlc"
 )
@@ -288,7 +289,7 @@ func MapReconciliationSnapshot(snapshot sqlc.ReconciliationSnapshot, flags []str
 
 	return ReconciliationResponse{
 		ID:         id.String(),
-		SnapshotAt: formatTime(snapshot.SnapshotAt),
+		SnapshotAt: formatPgTime(snapshot.SnapshotAt),
 		Summary: ReconciliationSummary{
 			ExpectedTotalCents:  snapshot.ExpectedTotalCents,
 			SucceededTotalCents: snapshot.SucceededTotalCents,
@@ -311,7 +312,7 @@ func MapAuditEvent(event sqlc.AuditEvent) (AuditEventResponse, error) {
 	}
 	return AuditEventResponse{
 		ID:            id.String(),
-		OccurredAt:    formatTime(event.OccurredAt),
+		OccurredAt:    formatPgTime(event.OccurredAt),
 		ActorType:     string(event.ActorType),
 		ActorID:       event.ActorID,
 		Action:        event.Action,
@@ -322,38 +323,65 @@ func MapAuditEvent(event sqlc.AuditEvent) (AuditEventResponse, error) {
 	}, nil
 }
 
-func formatTime(t time.Time) string {
-	return t.UTC().Format(time.RFC3339Nano)
+func formatPgTime(t pgtype.Timestamptz) string {
+	if !t.Valid {
+		return ""
+	}
+	return t.Time.UTC().Format(time.RFC3339Nano)
 }
 
-func formatTimePtr(t *time.Time) *string {
-	if t == nil {
+func formatPgTimePtr(t pgtype.Timestamptz) *string {
+	if !t.Valid {
 		return nil
 	}
-	s := formatTime(*t)
+	s := t.Time.UTC().Format(time.RFC3339Nano)
 	return &s
 }
 
 // JobCursorFromSettlementJob returns pagination cursor fields for a job.
 func JobCursorFromSettlementJob(job sqlc.SettlementJob) (time.Time, uuid.UUID, error) {
 	id, err := store.PgtypeToUUID(job.ID)
-	return job.CreatedAt, id, err
+	if err != nil {
+		return time.Time{}, uuid.Nil, err
+	}
+	if !job.CreatedAt.Valid {
+		return time.Time{}, uuid.Nil, err
+	}
+	return job.CreatedAt.Time, id, nil
 }
 
 // AuditCursorFromEvent returns pagination cursor fields for an audit event.
 func AuditCursorFromEvent(event sqlc.AuditEvent) (time.Time, uuid.UUID, error) {
 	id, err := store.PgtypeToUUID(event.ID)
-	return event.OccurredAt, id, err
+	if err != nil {
+		return time.Time{}, uuid.Nil, err
+	}
+	if !event.OccurredAt.Valid {
+		return time.Time{}, uuid.Nil, err
+	}
+	return event.OccurredAt.Time, id, nil
 }
 
 // LedgerCursorFromEntry returns pagination cursor fields for a ledger entry.
 func LedgerCursorFromEntry(entry sqlc.LedgerEntry) (time.Time, uuid.UUID, error) {
 	id, err := store.PgtypeToUUID(entry.ID)
-	return entry.PostedAt, id, err
+	if err != nil {
+		return time.Time{}, uuid.Nil, err
+	}
+	if !entry.PostedAt.Valid {
+		return time.Time{}, uuid.Nil, err
+	}
+	return entry.PostedAt.Time, id, nil
 }
 
 // ReconciliationCursorFromSnapshot returns pagination cursor fields.
 func ReconciliationCursorFromSnapshot(snapshot sqlc.ReconciliationSnapshot) (time.Time, uuid.UUID, error) {
 	id, err := store.PgtypeToUUID(snapshot.ID)
-	return snapshot.SnapshotAt, id, err
+	if err != nil {
+		return time.Time{}, uuid.Nil, err
+	}
+	if !snapshot.SnapshotAt.Valid {
+		return time.Time{}, uuid.Nil, err
+	}
+	return snapshot.SnapshotAt.Time, id, nil
 }
