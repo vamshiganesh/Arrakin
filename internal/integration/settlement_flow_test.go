@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -259,7 +260,7 @@ func TestConcurrentWorkersDoNotDoubleCompleteJob(t *testing.T) {
 		wg.Add(1)
 		go func(workerN int) {
 			defer wg.Done()
-			workerID := "concurrent-" + string(rune('A'+workerN))
+			workerID := fmt.Sprintf("concurrent-worker-%d", workerN)
 			for i := 0; i < 30; i++ {
 				_ = stack.Processor.ProcessOne(ctx, workerID)
 			}

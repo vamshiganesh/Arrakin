@@ -17,7 +17,8 @@ help:
 	@echo "  make sqlc          Generate sqlc store code"
 	@echo "  make build         Build the API binary"
 	@echo "  make run           Run the API locally"
-	@echo "  make test          Run unit tests"
+	@echo "  make test          Run unit tests (skips DB integration)"
+	@echo "  make test-integration  Run Docker Postgres integration tests"
 	@echo "  make tidy          go mod tidy"
 
 build:
@@ -29,6 +30,9 @@ run:
 
 test:
 	go test ./...
+
+test-integration:
+	go test ./internal/integration/... -v -count=1 -timeout 120s
 
 sqlc:
 	sqlc generate

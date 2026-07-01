@@ -17,9 +17,9 @@ This folder contains the implementation specifications for **Arrakin**, a reliab
 | 4 | Worker pool & payout processing | Scheduler & workers complete |
 | 5 | Ledger & idempotency | Domain logic complete |
 | 6 | HTTP API & reconciliation endpoints | Complete |
-| 7 | OpenAPI / Bruno / investments API | Partial (core routes + swagger) |
+| 7 | Integration tests | Complete |
 | 8 | Admin UI shell | Not started |
-| 9 | Integration tests & demo polish | Not started |
+| 9 | Demo polish & CI | Not started |
 
 ## Conventions
 
