@@ -17,7 +17,14 @@ func TestMaturedInvestmentCreatesSettlementJob(t *testing.T) {
 	stack := NewStack(t, pool)
 	fix := SeedDueMaturity(t, pool, ctx, "success")
 
-	job := EnqueueMaturity(t, ctx, stack, fix)
+	if _, err := stack.Scheduler.TickOnce(ctx); err != nil {
+		t.Fatalf("scheduler tick: %v", err)
+	}
+
+	job, err := JobByMaturity(ctx, pool, fix.MaturityID)
+	if err != nil {
+		t.Fatalf("load job for maturity: %v", err)
+	}
 	if job.Status != sqlc.SettlementJobStatusPending {
 		t.Fatalf("expected pending job, got %s", job.Status)
 	}
@@ -42,14 +49,14 @@ func TestSuccessfulPayoutPostsLedgerExactlyOnce(t *testing.T) {
 	pool, ctx := RequireDB(t)
 	stack := NewStack(t, pool)
 	fix := SeedDueMaturity(t, pool, ctx, "success")
-	job := EnqueueMaturity(t, ctx, stack, fix)
+	job := CreateJobForFixture(t, ctx, stack, fix)
 
 	jobID, err := store.PgtypeToUUID(job.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	final := ProcessUntilStatus(t, ctx, stack, jobID, sqlc.SettlementJobStatusSucceeded, "ledger-once-worker", 5*time.Second)
+	final := ProcessJobUntilStatus(t, ctx, stack, jobID, sqlc.SettlementJobStatusSucceeded, "ledger-once-worker", 5*time.Second)
 	if final.PayoutReference == nil || *final.PayoutReference == "" {
 		t.Fatal("expected payout reference on succeeded job")
 	}
@@ -80,7 +87,7 @@ func TestRetryableFailureIncrementsAttemptsAndSchedulesRetry(t *testing.T) {
 	pool, ctx := RequireDB(t)
 	stack := NewStack(t, pool)
 	fix := SeedDueMaturity(t, pool, ctx, "transient_then_success")
-	job := EnqueueMaturity(t, ctx, stack, fix)
+	job := CreateJobForFixture(t, ctx, stack, fix)
 
 	jobID, err := store.PgtypeToUUID(job.ID)
 	if err != nil {
@@ -119,7 +126,7 @@ func TestTerminalFailureGoesToDeadLetter(t *testing.T) {
 	pool, ctx := RequireDB(t)
 	stack := NewStack(t, pool)
 	fix := SeedDueMaturity(t, pool, ctx, "terminal_failure")
-	job := EnqueueMaturity(t, ctx, stack, fix)
+	job := CreateJobForFixture(t, ctx, stack, fix)
 
 	jobID, err := store.PgtypeToUUID(job.ID)
 	if err != nil {
@@ -308,7 +315,7 @@ func TestTransientProfileEventuallySucceedsWithRetries(t *testing.T) {
 	pool, ctx := RequireDB(t)
 	stack := NewStack(t, pool)
 	fix := SeedDueMaturity(t, pool, ctx, "transient_then_success")
-	job := EnqueueMaturity(t, ctx, stack, fix)
+	job := CreateJobForFixture(t, ctx, stack, fix)
 
 	jobID, err := store.PgtypeToUUID(job.ID)
 	if err != nil {
