@@ -82,6 +82,8 @@ body::-webkit-scrollbar,
   width: var(--scrollbar-size);
   height: var(--scrollbar-size);
   background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 html::-webkit-scrollbar-track,
