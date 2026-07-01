@@ -111,7 +111,7 @@ export function ScrollArea({ children, className, tone = 'light' }: ScrollAreaPr
       const currentViewport = viewportRef.current
       if (!drag || !currentViewport) return
 
-      const { scrollHeight, clientHeight, scrollTop } = currentViewport
+      const { scrollHeight, clientHeight } = currentViewport
       const maxScroll = scrollHeight - clientHeight
       const ratio = clientHeight / scrollHeight
       const nextThumbHeight = Math.max(clientHeight * ratio, 36)

@@ -306,6 +306,7 @@ code,
 
 .panel-body.flush {
   padding: 0;
+  overflow-x: auto;
 }
 
 .stat-grid {
