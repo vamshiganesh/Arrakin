@@ -1,4 +1,4 @@
-.PHONY: help build run test sqlc migrate-up migrate-down migrate-create seed docker-up docker-down docker-logs tidy fmt vet lint
+.PHONY: help build run test sqlc migrate-up migrate-down migrate-create seed docker-up docker-down docker-logs tidy fmt vet lint swagger
 
 APP_NAME := arrakin
 CMD_DIR := ./cmd/arrakin
@@ -32,6 +32,9 @@ test:
 
 sqlc:
 	sqlc generate
+
+swagger:
+	swag init -g cmd/arrakin/main.go -o docs --parseDependency --parseInternal
 
 migrate-up:
 	migrate -path migrations -database "$(DATABASE_URL)" up

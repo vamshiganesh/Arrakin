@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,4 +28,4 @@ func TestHealthLive(t *testing.T) {
 
 type stubPinger struct{}
 
-func (stubPinger) Ping(_ interface{ Done() <-chan struct{} }) error { return nil }
+func (stubPinger) Ping(context.Context) error { return nil }
