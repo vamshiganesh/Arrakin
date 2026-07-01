@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/vamshiganesh/arrakin/internal/audit"
 	"github.com/vamshiganesh/arrakin/internal/ledger"
@@ -61,7 +62,6 @@ func newTestStack(t *testing.T, pool *pgxpool.Pool) (*store.Store, *scheduler.Sc
 		payout.NewSimulator(),
 		retry.Policy{BaseDelay: time.Millisecond, MaxDelay: time.Second},
 	)
-	_ = sched
 	return st, sched, processor
 }
 
@@ -84,74 +84,63 @@ func TestOrchestratorEnqueueIdempotent(t *testing.T) {
 
 func TestProcessorRetryThenSuccess(t *testing.T) {
 	pool, ctx := testPool(t)
-	st, sched, processor := newTestStack(t, pool)
+	_, sched, processor := newTestStack(t, pool)
 
 	if _, err := sched.TickOnce(ctx); err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
 
-	jobID := uuid.MustParse("b2000001-0002-4002-8002-000000000002")
+	investmentID := uuid.MustParse("b2000001-0002-4002-8002-000000000002")
 	workerID := "test-retry-worker"
 
-	var succeeded bool
-	for i := 0; i < 5; i++ {
-		err := processor.ProcessOne(ctx, workerID)
-		if err != nil && !store.IsNotFound(err) && err != store.ErrNoJobAvailable {
-			if err == store.ErrNoJobAvailable {
-				break
-			}
-		}
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		_ = processor.ProcessOne(ctx, workerID)
 
-		job, err := loadJobByInvestment(ctx, st, jobID)
+		job, err := getJobByInvestment(ctx, pool, investmentID)
 		if err != nil {
-			continue
+			if err == pgx.ErrNoRows {
+				continue
+			}
+			t.Fatalf("load job: %v", err)
 		}
 		if job.Status == sqlc.SettlementJobStatusSucceeded {
-			succeeded = true
-			break
+			return
 		}
-		if job.Status == sqlc.SettlementJobStatusFailed && job.NextRetryAt.Valid {
-			_, err := pool.Exec(ctx, `UPDATE settlement_jobs SET next_retry_at = now() - interval '1 second' WHERE id = $1`, job.ID)
-			if err != nil {
+		if job.Status == sqlc.SettlementJobStatusFailed {
+			if _, err := pool.Exec(ctx, `
+				UPDATE settlement_jobs SET next_retry_at = now() - interval '1 second'
+				WHERE id = $1
+			`, job.ID); err != nil {
 				t.Fatalf("fast-forward retry: %v", err)
 			}
 		}
-		_ = processor.ProcessOne(ctx, workerID)
-		job, _ = loadJobByInvestment(ctx, st, jobID)
-		if job.Status == sqlc.SettlementJobStatusSucceeded {
-			succeeded = true
-			break
-		}
 	}
-
-	if !succeeded {
-		t.Fatal("expected transient_then_success job to eventually succeed")
-	}
+	t.Fatal("expected transient_then_success job to eventually succeed")
 }
 
 func TestConcurrentWorkersNoDuplicateSuccess(t *testing.T) {
 	pool, ctx := testPool(t)
-	st, sched, processor := newTestStack(t, pool)
+	_, sched, processor := newTestStack(t, pool)
 	if _, err := sched.TickOnce(ctx); err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
 
 	var wg sync.WaitGroup
-	workers := 4
-	for i := 0; i < workers; i++ {
+	for i := 0; i < 4; i++ {
 		wg.Add(1)
-		go func(id int) {
+		go func(n int) {
 			defer wg.Done()
-			for j := 0; j < 10; j++ {
-				_ = processor.ProcessOne(ctx, "concurrent-"+uuid.NewString())
+			id := "concurrent-worker"
+			for j := 0; j < 20; j++ {
+				_ = processor.ProcessOne(ctx, id)
 			}
 		}(i)
 	}
 	wg.Wait()
 
 	var succeeded int
-	err := pool.QueryRow(ctx, `SELECT count(*) FROM settlement_jobs WHERE status = 'succeeded'`).Scan(&succeeded)
-	if err != nil {
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM settlement_jobs WHERE status = 'succeeded'`).Scan(&succeeded); err != nil {
 		t.Fatalf("count succeeded: %v", err)
 	}
 	if succeeded == 0 {
@@ -159,37 +148,33 @@ func TestConcurrentWorkersNoDuplicateSuccess(t *testing.T) {
 	}
 
 	var duplicateRefs int
-	err = pool.QueryRow(ctx, `
+	if err := pool.QueryRow(ctx, `
 		SELECT count(*) FROM (
 			SELECT payout_reference FROM settlement_jobs
 			WHERE payout_reference IS NOT NULL
 			GROUP BY payout_reference HAVING count(*) > 1
 		) d
-	`).Scan(&duplicateRefs)
-	if err != nil {
+	`).Scan(&duplicateRefs); err != nil {
 		t.Fatalf("duplicate refs: %v", err)
 	}
 	if duplicateRefs > 0 {
-		t.Fatalf("found duplicate payout references")
+		t.Fatal("found duplicate payout references")
 	}
 }
 
-func loadJobByInvestment(ctx context.Context, st *store.Store, investmentID uuid.UUID) (sqlc.SettlementJob, error) {
-	var job sqlc.SettlementJob
-	err := st.WithTx(ctx, func(ctx context.Context, q *sqlc.Queries) error {
-		var err error
-		job, err = q.GetSettlementJobByMaturityScheduleID(ctx, store.UUIDToPgtype(uuid.Nil))
-		_ = job
-		return err
-	})
-	_ = err
-	row := st.Pool().QueryRow(ctx, `SELECT id, maturity_schedule_id, investment_id, idempotency_key, status, principal_cents, gross_return_cents, platform_fee_cents, withholding_tax_cents, net_payout_cents, payout_reference, retry_count, max_retries, next_retry_at, processing_started_at, processing_owner, last_error, error_class, dead_letter_reason, created_at, updated_at, completed_at FROM settlement_jobs WHERE investment_id = $1 ORDER BY created_at DESC LIMIT 1`, investmentID)
-	return scanJob(row.Scan)
-}
-
-func scanJob(scan func(dest ...any) error) (sqlc.SettlementJob, error) {
+func getJobByInvestment(ctx context.Context, pool *pgxpool.Pool, investmentID uuid.UUID) (sqlc.SettlementJob, error) {
+	row := pool.QueryRow(ctx, `
+		SELECT id, maturity_schedule_id, investment_id, idempotency_key, status,
+			principal_cents, gross_return_cents, platform_fee_cents, withholding_tax_cents, net_payout_cents,
+			payout_reference, retry_count, max_retries, next_retry_at, processing_started_at, processing_owner,
+			last_error, error_class, dead_letter_reason, created_at, updated_at, completed_at
+		FROM settlement_jobs
+		WHERE investment_id = $1
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, investmentID)
 	var j sqlc.SettlementJob
-	err := scan(
+	err := row.Scan(
 		&j.ID, &j.MaturityScheduleID, &j.InvestmentID, &j.IdempotencyKey, &j.Status,
 		&j.PrincipalCents, &j.GrossReturnCents, &j.PlatformFeeCents, &j.WithholdingTaxCents, &j.NetPayoutCents,
 		&j.PayoutReference, &j.RetryCount, &j.MaxRetries, &j.NextRetryAt, &j.ProcessingStartedAt, &j.ProcessingOwner,
