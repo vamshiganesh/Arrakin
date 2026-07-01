@@ -109,3 +109,37 @@ func (LedgerRepo) ListByJobID(ctx context.Context, q *sqlc.Queries, jobID pgtype
 	}
 	return entries, nil
 }
+
+// List returns ledger entries matching optional filters with cursor pagination.
+func (LedgerRepo) List(ctx context.Context, q *sqlc.Queries, filter ListLedgerEntriesFilter) ([]sqlc.LedgerEntry, error) {
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+
+	entries, err := q.ListLedgerEntries(ctx, sqlc.ListLedgerEntriesParams{
+		SettlementJobID: filter.SettlementJobID,
+		AccountCode:     filter.AccountCode,
+		FromTime:        filter.FromTime,
+		ToTime:          filter.ToTime,
+		CursorTime:      filter.CursorTime,
+		CursorID:        filter.CursorID,
+		LimitVal:        limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list ledger entries: %w", err)
+	}
+	return entries, nil
+}
+
+// ListAccounts returns all ledger accounts ordered by code.
+func (LedgerRepo) ListAccounts(ctx context.Context, q *sqlc.Queries) ([]sqlc.LedgerAccount, error) {
+	accounts, err := q.ListLedgerAccounts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list ledger accounts: %w", err)
+	}
+	return accounts, nil
+}
