@@ -1,10 +1,11 @@
-.PHONY: help build run test sqlc migrate-up migrate-down migrate-create docker-up docker-down docker-logs tidy fmt vet lint
+.PHONY: help build run test sqlc migrate-up migrate-down migrate-create seed docker-up docker-down docker-logs tidy fmt vet lint
 
 APP_NAME := arrakin
 CMD_DIR := ./cmd/arrakin
 BIN_DIR := ./bin
 DATABASE_URL ?= postgres://arrakin:arrakin@localhost:5432/arrakin?sslmode=disable
 MIGRATIONS_DIR := file://migrations
+SEED_FILE := seeds/001_demo_data.sql
 
 help:
 	@echo "Arrakin development targets:"
@@ -12,6 +13,7 @@ help:
 	@echo "  make docker-down   Stop infrastructure containers"
 	@echo "  make migrate-up    Apply database migrations"
 	@echo "  make migrate-down  Roll back last migration"
+	@echo "  make seed          Load idempotent demo seed data"
 	@echo "  make sqlc          Generate sqlc store code"
 	@echo "  make build         Build the API binary"
 	@echo "  make run           Run the API locally"
@@ -36,6 +38,9 @@ migrate-up:
 
 migrate-down:
 	migrate -path migrations -database "$(DATABASE_URL)" down 1
+
+seed:
+	psql "$(DATABASE_URL)" -v ON_ERROR_STOP=1 -f $(SEED_FILE)
 
 migrate-create:
 	@read -p "Migration name: " name; \

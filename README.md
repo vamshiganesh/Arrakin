@@ -42,13 +42,19 @@ docker compose ps
 make migrate-up
 ```
 
-### 4. Generate sqlc code (after schema or query changes)
+### 4. Load demo seed data (optional)
+
+```bash
+make seed
+```
+
+### 5. Generate sqlc code (after schema or query changes)
 
 ```bash
 make sqlc
 ```
 
-### 5. Run the API
+### 6. Run the API
 
 ```bash
 make run
@@ -56,7 +62,7 @@ make run
 
 The server listens on `http://localhost:8080` by default.
 
-### 6. Verify health
+### 7. Verify health
 
 ```bash
 curl -s http://localhost:8080/healthz | jq .
@@ -76,6 +82,7 @@ Expected:
 | `make docker-down` | Stop containers |
 | `make migrate-up` | Apply migrations |
 | `make migrate-down` | Roll back one migration |
+| `make seed` | Load idempotent demo investors, investments, maturities |
 | `make sqlc` | Regenerate typed SQL access code |
 | `make build` | Build `bin/arrakin` |
 | `make run` | Run API with hot `go run` |

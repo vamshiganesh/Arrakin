@@ -1,5 +1,6 @@
 -- Canonical schema snapshot for sqlc code generation.
--- Keep in sync with migrations/000001_init_schema.up.sql
+-- Reflects migrations through 000002_schema_hardening.
+-- Table/column definitions only; triggers and partial indexes live in migrations.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -107,7 +108,8 @@ CREATE TABLE payout_attempts (
     error_message TEXT,
     error_class error_class,
     started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    finished_at TIMESTAMPTZ
+    finished_at TIMESTAMPTZ,
+    UNIQUE (settlement_job_id, attempt_number)
 );
 
 CREATE TABLE ledger_accounts (
@@ -139,7 +141,8 @@ CREATE TABLE idempotency_keys (
     response_status INT,
     response_body JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    expires_at TIMESTAMPTZ NOT NULL
+    expires_at TIMESTAMPTZ NOT NULL,
+    UNIQUE (scope, key)
 );
 
 CREATE TABLE reconciliation_snapshots (
