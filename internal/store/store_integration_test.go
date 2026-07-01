@@ -53,14 +53,26 @@ func demoInvestmentIDForClaim() uuid.UUID {
 	return uuid.MustParse("b2000001-0002-4002-8002-000000000005")
 }
 
+func seedInvestor(t *testing.T, pool *pgxpool.Pool, ctx context.Context, investorID uuid.UUID) {
+	t.Helper()
+	suffix := investorID.String()[:8]
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO investors (id, external_ref, display_name)
+		VALUES ($1, $2, $3)
+	`, investorID, "integ-"+suffix, "Integration Investor "+suffix); err != nil {
+		t.Fatalf("seed investor: %v", err)
+	}
+}
+
 func TestCreateSettlementJobIdempotent(t *testing.T) {
 	s, ctx := testStore(t)
 	repos := s.Repos()
 	pool := s.Pool()
 
+	investorID := uuid.New()
 	investmentID := uuid.New()
 	maturityID := uuid.New()
-	investorID := uuid.MustParse("a1000001-0001-4001-8001-000000000001")
+	seedInvestor(t, pool, ctx, investorID)
 	if _, err := pool.Exec(ctx, `
 		INSERT INTO investments (id, investor_id, principal_cents, annual_rate_bps, term_days, currency)
 		VALUES ($1, $2, 1000000, 800, 365, 'USD')
@@ -118,9 +130,10 @@ func TestClaimSettlementJob(t *testing.T) {
 	repos := s.Repos()
 	pool := s.Pool()
 
+	investorID := uuid.New()
 	investmentID := uuid.New()
 	maturityID := uuid.New()
-	investorID := uuid.MustParse("a1000001-0001-4001-8001-000000000001")
+	seedInvestor(t, pool, ctx, investorID)
 	if _, err := pool.Exec(ctx, `
 		INSERT INTO investments (id, investor_id, principal_cents, annual_rate_bps, term_days, currency)
 		VALUES ($1, $2, 100000, 800, 365, 'USD')

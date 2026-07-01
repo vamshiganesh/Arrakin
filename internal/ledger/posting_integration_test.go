@@ -36,15 +36,27 @@ func testPool(t *testing.T) (*pgxpool.Pool, context.Context) {
 	return pool, ctx
 }
 
+func seedInvestor(t *testing.T, pool *pgxpool.Pool, ctx context.Context, investorID uuid.UUID) {
+	t.Helper()
+	suffix := investorID.String()[:8]
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO investors (id, external_ref, display_name)
+		VALUES ($1, $2, $3)
+	`, investorID, "integ-"+suffix, "Integration Investor "+suffix); err != nil {
+		t.Fatalf("seed investor: %v", err)
+	}
+}
+
 func TestPostSettlementWritesBalancedEntries(t *testing.T) {
 	pool, ctx := testPool(t)
 	s := store.New(pool)
 	posting := ledger.NewPostingService(s.Repos().Ledger)
 
 	jobID := uuid.New()
-	investorID := uuid.MustParse("a1000001-0001-4001-8001-000000000001")
+	investorID := uuid.New()
 	investmentID := uuid.New()
 	maturityID := uuid.New()
+	seedInvestor(t, pool, ctx, investorID)
 	breakdown := settlement.Breakdown{
 		PrincipalCents:      money.Cents(1_000_000),
 		GrossReturnCents:    money.Cents(80_000),

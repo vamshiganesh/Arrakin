@@ -36,7 +36,7 @@ test:
 	go test ./...
 
 test-integration:
-	go test -tags=integration ./internal/... -v -count=1 -timeout 120s
+	go test -tags=integration ./internal/integration/... ./internal/store/... ./internal/ledger/... -v -count=1 -timeout 120s
 
 demo:
 	@chmod +x scripts/demo.sh
