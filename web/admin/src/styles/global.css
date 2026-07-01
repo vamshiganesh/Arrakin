@@ -413,6 +413,8 @@ code,
   padding: var(--space-md) var(--space-lg);
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-muted);
+  position: relative;
+  z-index: 2;
 }
 
 .filter-bar label {
@@ -486,11 +488,7 @@ code,
 }
 
 .custom-select-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 20;
+  z-index: 200;
   margin: 0;
   padding: 0.25rem 0;
   list-style: none;
@@ -504,12 +502,13 @@ code,
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 0.45rem 0.75rem;
+  padding: 0.5rem 0.8rem;
   border: none;
   background: transparent;
   color: var(--text-primary);
   font-family: inherit;
   font-size: 13px;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
 }
@@ -519,7 +518,9 @@ code,
 }
 
 .custom-select-option.is-selected {
-  background: var(--accent-soft);
+  background: var(--bg-muted);
+  color: var(--text-primary);
+  font-weight: 600;
   box-shadow: inset 3px 0 0 var(--accent);
 }
 

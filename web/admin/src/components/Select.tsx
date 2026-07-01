@@ -1,15 +1,23 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent,
   type ReactNode,
 } from 'react'
+import { createPortal } from 'react-dom'
 
 export type SelectOption<T extends string> = {
   value: T
   label: string
+}
+
+type MenuPosition = {
+  top: number
+  left: number
+  width: number
 }
 
 type SelectProps<T extends string> = {
@@ -34,17 +42,50 @@ export function Select<T extends string>({
   const fallbackId = useId()
   const selectId = id ?? fallbackId
   const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLUListElement>(null)
   const [open, setOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null)
 
   const selected = options.find((option) => option.value === value) ?? options[0]
+
+  const updateMenuPosition = () => {
+    const trigger = triggerRef.current
+    if (!trigger) return
+
+    const rect = trigger.getBoundingClientRect()
+    setMenuPosition({
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+    })
+  }
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPosition(null)
+      return
+    }
+
+    updateMenuPosition()
+
+    const onLayoutChange = () => updateMenuPosition()
+    window.addEventListener('resize', onLayoutChange)
+    window.addEventListener('scroll', onLayoutChange, true)
+
+    return () => {
+      window.removeEventListener('resize', onLayoutChange)
+      window.removeEventListener('scroll', onLayoutChange, true)
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) return
 
     const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false)
-      }
+      const target = event.target as Node
+      if (rootRef.current?.contains(target) || menuRef.current?.contains(target)) return
+      setOpen(false)
     }
 
     document.addEventListener('mousedown', onPointerDown)
@@ -89,9 +130,48 @@ export function Select<T extends string>({
     .filter(Boolean)
     .join(' ')
 
+  const menu =
+    open && menuPosition
+      ? createPortal(
+          <ul
+            ref={menuRef}
+            className="custom-select-menu"
+            role="listbox"
+            aria-labelledby={selectId}
+            style={{
+              position: 'fixed',
+              top: menuPosition.top,
+              left: menuPosition.left,
+              width: menuPosition.width,
+            }}
+          >
+            {options.map((option) => {
+              const isSelected = option.value === value
+              return (
+                <li key={option.label} role="presentation">
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    className={
+                      isSelected ? 'custom-select-option is-selected' : 'custom-select-option'
+                    }
+                    onClick={() => selectOption(option.value)}
+                  >
+                    {renderOption ? renderOption(option, isSelected) : option.label}
+                  </button>
+                </li>
+              )
+            })}
+          </ul>,
+          document.body,
+        )
+      : null
+
   return (
     <div ref={rootRef} className={classes}>
       <button
+        ref={triggerRef}
         type="button"
         id={selectId}
         className="custom-select-trigger"
@@ -105,27 +185,7 @@ export function Select<T extends string>({
         </span>
         <span className="custom-select-chevron" aria-hidden />
       </button>
-
-      {open ? (
-        <ul className="custom-select-menu" role="listbox" aria-labelledby={selectId}>
-          {options.map((option) => {
-            const isSelected = option.value === value
-            return (
-              <li key={option.label} role="presentation">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={isSelected}
-                  className={isSelected ? 'custom-select-option is-selected' : 'custom-select-option'}
-                  onClick={() => selectOption(option.value)}
-                >
-                  {renderOption ? renderOption(option, isSelected) : option.label}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      ) : null}
+      {menu}
     </div>
   )
 }

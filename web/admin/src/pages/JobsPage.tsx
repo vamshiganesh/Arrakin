@@ -71,12 +71,6 @@ export function JobsPage() {
             value={status}
             options={statuses}
             onChange={setStatus}
-            renderValue={(option) =>
-              option.value ? <StatusBadge status={option.value} /> : option.label
-            }
-            renderOption={(option) =>
-              option.value ? <StatusBadge status={option.value} /> : option.label
-            }
           />
         </div>
 
