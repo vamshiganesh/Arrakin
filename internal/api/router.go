@@ -15,12 +15,6 @@ type Dependencies struct {
 	Redis  handlers.RedisPinger
 }
 
-// DBPinger is re-exported for callers wiring the router.
-type DBPinger = handlers.DBPinger
-
-// RedisPinger is re-exported for callers wiring the router.
-type RedisPinger = handlers.RedisPinger
-
 // NewRouter builds the Gin engine with middleware and routes.
 func NewRouter(deps Dependencies) *gin.Engine {
 	router := gin.New()
