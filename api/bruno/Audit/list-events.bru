@@ -1,0 +1,13 @@
+meta {
+  name: List audit events
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/audit/events?limit=25
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}

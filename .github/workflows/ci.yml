@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: arrakin
+          POSTGRES_PASSWORD: arrakin
+          POSTGRES_DB: arrakin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U arrakin -d arrakin"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://arrakin:arrakin@localhost:5432/arrakin?sslmode=disable
+      REDIS_URL: redis://localhost:6379/0
+      APP_ENV: development
+      API_KEY: ci-test-api-key
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install golang-migrate
+        run: |
+          curl -fsSL https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xz
+          sudo mv migrate /usr/local/bin/migrate
+
+      - name: Migrate database
+        run: make migrate-up
+
+      - name: Unit tests
+        run: make test
+
+      - name: Integration tests
+        run: make test-integration
+
+      - name: Build API binary
+        run: make build
+
+      - name: Validate OpenAPI package
+        run: go build ./docs/...
+
+  admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/admin/package-lock.json
+
+      - name: Build admin UI
+        run: make admin-build

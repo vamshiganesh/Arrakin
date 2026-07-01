@@ -1,0 +1,14 @@
+meta {
+  name: Run reconciliation
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/reconciliation/run
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+  Idempotency-Key: bruno-recon-1
+}

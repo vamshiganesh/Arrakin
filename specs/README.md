@@ -19,7 +19,7 @@ This folder contains the implementation specifications for **Arrakin**, a reliab
 | 6 | HTTP API & reconciliation endpoints | Complete |
 | 7 | Integration tests | Complete |
 | 8 | Admin UI shell | Complete |
-| 9 | Demo polish & CI | Not started |
+| 9 | Demo polish & CI | Complete |
 
 ## Conventions
 

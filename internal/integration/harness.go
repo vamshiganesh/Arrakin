@@ -7,16 +7,25 @@ package integration
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/vamshiganesh/arrakin/internal/domain/settlement"
+	"github.com/vamshiganesh/arrakin/internal/api"
 	"github.com/vamshiganesh/arrakin/internal/audit"
+	"github.com/vamshiganesh/arrakin/internal/config"
+	"github.com/vamshiganesh/arrakin/internal/domain/settlement"
+	"github.com/vamshiganesh/arrakin/internal/idempotency"
 	"github.com/vamshiganesh/arrakin/internal/ledger"
+	"github.com/vamshiganesh/arrakin/internal/platform/redis"
 	"github.com/vamshiganesh/arrakin/internal/reconciliation"
 	"github.com/vamshiganesh/arrakin/internal/scheduler"
 	"github.com/vamshiganesh/arrakin/internal/settlement/calculator"
@@ -64,6 +73,69 @@ func RequireDB(t *testing.T) (*pgxpool.Pool, context.Context) {
 	}
 	t.Cleanup(pool.Close)
 	return pool, ctx
+}
+
+// RequireRedis returns a live Redis client or skips the test.
+func RequireRedis(t *testing.T) (*redis.Client, context.Context) {
+	t.Helper()
+	url := os.Getenv("REDIS_URL")
+	if url == "" {
+		url = "redis://localhost:6379/0"
+	}
+	ctx := context.Background()
+	client, err := redis.New(ctx, url)
+	if err != nil {
+		t.Skipf("redis unavailable: %v", err)
+	}
+	t.Cleanup(func() { _ = client.Close() })
+	return client, ctx
+}
+
+// NewTestAPI builds an HTTP handler wired like the production API router.
+func NewTestAPI(t *testing.T, pool *pgxpool.Pool, redisClient *redis.Client) http.Handler {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+
+	st := store.New(pool)
+	repos := st.Repos()
+	calc, err := calculator.New(calculator.Config{PlatformFeeBPS: 100, WithholdingTaxBPS: 1500})
+	if err != nil {
+		t.Fatal(err)
+	}
+	auditPub := audit.NewPublisher(repos.Audit)
+	idemSvc := idempotency.NewService(repos.Idempotency, 24*time.Hour)
+	orch := orchestrator.New(st, calc, auditPub, 5)
+	sched := scheduler.New(scheduler.Config{
+		Interval:        time.Minute,
+		ReaperInterval:  time.Minute,
+		JobLeaseTimeout: 5 * time.Minute,
+	}, orch, st, auditPub)
+
+	cfg := config.Config{
+		AppEnv:  "development",
+		APIKey:  "integration-test-key",
+		LogLevel: "error",
+	}
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	return api.NewRouter(api.Dependencies{
+		Logger:      logger,
+		Config:      cfg,
+		DB:          pool,
+		Redis:       redisClient,
+		Store:       st,
+		Scheduler:   sched,
+		Audit:       auditPub,
+		Idempotency: idemSvc,
+	})
+}
+
+// NewTestServer starts an httptest server for HTTP integration tests.
+func NewTestServer(t *testing.T, pool *pgxpool.Pool, redisClient *redis.Client) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(NewTestAPI(t, pool, redisClient))
+	t.Cleanup(srv.Close)
+	return srv
 }
 
 // NewStack builds scheduler, orchestrator, processor, and reconciliation services.

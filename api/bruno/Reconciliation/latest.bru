@@ -1,0 +1,13 @@
+meta {
+  name: Latest reconciliation
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/reconciliation/latest
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}

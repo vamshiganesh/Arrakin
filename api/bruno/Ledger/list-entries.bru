@@ -1,0 +1,13 @@
+meta {
+  name: List ledger entries
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/ledger/entries?limit=25
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}

@@ -1,0 +1,13 @@
+meta {
+  name: List settlement jobs
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/settlement-jobs?limit=25
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
