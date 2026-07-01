@@ -54,12 +54,29 @@ func demoInvestmentIDForClaim() uuid.UUID {
 func TestCreateSettlementJobIdempotent(t *testing.T) {
 	s, ctx := testStore(t)
 	repos := s.Repos()
+	pool := s.Pool()
+
+	investmentID := uuid.New()
+	maturityID := uuid.New()
+	investorID := uuid.MustParse("a1000001-0001-4001-8001-000000000001")
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO investments (id, investor_id, principal_cents, annual_rate_bps, term_days, currency)
+		VALUES ($1, $2, 1000000, 800, 365, 'USD')
+	`, investmentID, investorID); err != nil {
+		t.Fatalf("seed investment: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO maturity_schedules (id, investment_id, matures_at, status)
+		VALUES ($1, $2, now() - interval '1 hour', 'pending')
+	`, maturityID, investmentID); err != nil {
+		t.Fatalf("seed maturity: %v", err)
+	}
 
 	err := s.WithTx(ctx, func(ctx context.Context, q *sqlc.Queries) error {
 		params := store.CreateJobParams{
-			MaturityScheduleID:  store.UUIDToPgtype(demoMaturityID()),
-			InvestmentID:        store.UUIDToPgtype(demoInvestmentID()),
-			IdempotencyKey:      "enqueue:" + demoMaturityID().String(),
+			MaturityScheduleID:  store.UUIDToPgtype(maturityID),
+			InvestmentID:        store.UUIDToPgtype(investmentID),
+			IdempotencyKey:      "enqueue:" + maturityID.String(),
 			PrincipalCents:      1_000_000,
 			GrossReturnCents:    80_000,
 			PlatformFeeCents:    800,
