@@ -14,7 +14,7 @@ This folder contains the implementation specifications for **Arrakin**, a reliab
 | 1 | Foundation (schema, Docker, config) | Complete |
 | 2 | Core domain & settlement calculator | Schema & seeds complete |
 | 3 | Scheduler & job queue | Repository layer complete |
-| 4 | Worker pool & payout processing | Not started |
+| 4 | Worker pool & payout processing | Domain logic complete |
 | 5 | Ledger & idempotency | Not started |
 | 6 | Retry, dead-letter, reconciliation | Not started |
 | 7 | HTTP API & OpenAPI | Not started |
