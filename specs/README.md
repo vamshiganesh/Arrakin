@@ -13,7 +13,7 @@ This folder contains the implementation specifications for **Arrakin**, a reliab
 | 0 | Spec & repo plan | Complete |
 | 1 | Foundation (schema, Docker, config) | Complete |
 | 2 | Core domain & settlement calculator | Schema & seeds complete |
-| 3 | Scheduler & job queue | Not started |
+| 3 | Scheduler & job queue | Repository layer complete |
 | 4 | Worker pool & payout processing | Not started |
 | 5 | Ledger & idempotency | Not started |
 | 6 | Retry, dead-letter, reconciliation | Not started |
