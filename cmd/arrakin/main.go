@@ -1,3 +1,11 @@
+// @title Arrakin API
+// @version 1.0
+// @description Settlement, ledger, and payout engine HTTP API
+// @host localhost:8080
+// @BasePath /api/v1
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-API-Key
 package main
 
 import (
@@ -82,6 +90,7 @@ func run() error {
 	}
 
 	auditPub := audit.NewPublisher(repos.Audit)
+	idemSvc := idempotency.NewService(repos.Idempotency, 24*time.Hour)
 	ledgerSvc := ledger.NewPostingService(repos.Ledger)
 	payoutGateway := payout.NewSimulator()
 	retryPolicy := retry.Policy{BaseDelay: cfg.RetryBaseDelay, MaxDelay: cfg.RetryMaxDelay}
@@ -105,9 +114,14 @@ func run() error {
 	go workerPool.Run(engineCtx)
 
 	router := api.NewRouter(api.Dependencies{
-		Logger: logger,
-		DB:     pool,
-		Redis:  redisClient,
+		Logger:      logger,
+		Config:      cfg,
+		DB:          pool,
+		Redis:       redisClient,
+		Store:       st,
+		Scheduler:   sched,
+		Audit:       auditPub,
+		Idempotency: idemSvc,
 	})
 
 	server := &http.Server{

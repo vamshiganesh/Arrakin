@@ -8,6 +8,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/vamshiganesh/arrakin/internal/api/handlers"
 	"github.com/vamshiganesh/arrakin/internal/api/services"
+	"github.com/vamshiganesh/arrakin/internal/audit"
 	"github.com/vamshiganesh/arrakin/internal/config"
 	"github.com/vamshiganesh/arrakin/internal/idempotency"
 	"github.com/vamshiganesh/arrakin/internal/platform/httpx"
@@ -26,6 +27,7 @@ type Dependencies struct {
 	Redis       handlers.RedisPinger
 	Store       *store.Store
 	Scheduler   *scheduler.Scheduler
+	Audit       *audit.Publisher
 	Idempotency *idempotency.Service
 }
 
@@ -42,7 +44,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	reconSvc := reconciliation.New(deps.Store.Repos().Reconciliation)
-	settlementSvc := services.NewSettlementService(deps.Store, nil)
+	settlementSvc := services.NewSettlementService(deps.Store, deps.Audit)
 	ledgerSvc := services.NewLedgerService(deps.Store)
 	reconciliationAPI := services.NewReconciliationService(deps.Store, reconSvc)
 	auditSvc := services.NewAuditService(deps.Store)
