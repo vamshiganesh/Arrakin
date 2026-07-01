@@ -1,3 +1,5 @@
+//go:build integration
+
 // Package integration contains end-to-end settlement flow tests against Docker Postgres.
 // Run with: make test-integration (requires docker compose postgres on localhost:5432).
 package integration

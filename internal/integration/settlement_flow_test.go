@@ -1,3 +1,5 @@
+//go:build integration
+
 package integration
 
 import (
@@ -94,7 +96,7 @@ func TestRetryableFailureIncrementsAttemptsAndSchedulesRetry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ProcessJobOnce(t, ctx, stack, "retry-test-worker")
+	ProcessJobUntilStatus(t, ctx, stack, jobID, sqlc.SettlementJobStatusFailed, "retry-test-worker", 5*time.Second)
 
 	afterFail, err := JobByID(ctx, pool, jobID)
 	if err != nil {

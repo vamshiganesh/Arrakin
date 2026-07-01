@@ -32,7 +32,7 @@ test:
 	go test ./...
 
 test-integration:
-	go test ./internal/integration/... -v -count=1 -timeout 120s
+	go test -tags=integration ./internal/integration/... -v -count=1 -timeout 120s
 
 sqlc:
 	sqlc generate
