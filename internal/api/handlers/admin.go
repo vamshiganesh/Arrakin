@@ -8,7 +8,6 @@ import (
 	"github.com/vamshiganesh/arrakin/internal/api/dto"
 	"github.com/vamshiganesh/arrakin/internal/api/services"
 	"github.com/vamshiganesh/arrakin/internal/idempotency"
-	"github.com/vamshiganesh/arrakin/internal/platform/httpx"
 	"github.com/vamshiganesh/arrakin/internal/store"
 )
 
