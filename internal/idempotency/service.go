@@ -18,6 +18,15 @@ type StoredResponse struct {
 	Body       json.RawMessage
 }
 
+// State describes the lifecycle of an idempotency key lookup.
+type State int
+
+const (
+	StateNotFound State = iota
+	StateInProgress
+	StateCompleted
+)
+
 // Service coordinates HTTP/admin idempotency key lifecycle.
 type Service struct {
 	repo store.IdempotencyRepository
@@ -32,31 +41,50 @@ func NewService(repo store.IdempotencyRepository, ttl time.Duration) *Service {
 	return &Service{repo: repo, ttl: ttl}
 }
 
-// Lookup returns a stored response when an active idempotency key exists.
-func (s *Service) Lookup(ctx context.Context, q *sqlc.Queries, scope, key string) (StoredResponse, bool, error) {
+func (s *Service) lookupState(ctx context.Context, q *sqlc.Queries, scope, key string) (State, StoredResponse, error) {
 	row, err := s.repo.GetActive(ctx, q, scope, key)
 	if err != nil {
 		if store.IsNotFound(err) {
-			return StoredResponse{}, false, nil
+			return StateNotFound, StoredResponse{}, nil
 		}
-		return StoredResponse{}, false, fmt.Errorf("idempotency lookup: %w", err)
+		return StateNotFound, StoredResponse{}, fmt.Errorf("idempotency lookup: %w", err)
 	}
 	if row.ResponseStatus == nil {
-		return StoredResponse{}, false, nil
+		return StateInProgress, StoredResponse{}, nil
 	}
-	return StoredResponse{
+	return StateCompleted, StoredResponse{
 		StatusCode: int(*row.ResponseStatus),
 		Body:       row.ResponseBody,
-	}, true, nil
+	}, nil
+}
+
+// Lookup returns a stored response when an active completed idempotency key exists.
+func (s *Service) Lookup(ctx context.Context, q *sqlc.Queries, scope, key string) (StoredResponse, bool, error) {
+	state, response, err := s.lookupState(ctx, q, scope, key)
+	if err != nil {
+		return StoredResponse{}, false, err
+	}
+	if state != StateCompleted {
+		return StoredResponse{}, false, nil
+	}
+	return response, true, nil
 }
 
 // Reserve claims an idempotency key before executing a mutating handler.
 func (s *Service) Reserve(ctx context.Context, q *sqlc.Queries, scope, key, requestHash string) error {
+	state, _, err := s.lookupState(ctx, q, scope, key)
+	if err != nil {
+		return err
+	}
+	if state != StateNotFound {
+		return store.ErrIdempotencyKeyExists
+	}
+
 	var hash pgtype.Text
 	if requestHash != "" {
 		hash = pgtype.Text{String: requestHash, Valid: true}
 	}
-	_, err := s.repo.Reserve(ctx, q, store.ReserveIdempotencyParams{
+	_, err = s.repo.Reserve(ctx, q, store.ReserveIdempotencyParams{
 		Scope:       scope,
 		Key:         key,
 		RequestHash: hash,
@@ -92,23 +120,31 @@ func (s *Service) Execute(
 	scope, key, requestHash string,
 	fn Handler,
 ) (StoredResponse, bool, error) {
-	if stored, ok, err := s.Lookup(ctx, q, scope, key); err != nil {
+	state, stored, err := s.lookupState(ctx, q, scope, key)
+	if err != nil {
 		return StoredResponse{}, false, err
-	} else if ok {
+	}
+	switch state {
+	case StateCompleted:
 		return stored, true, nil
+	case StateInProgress:
+		return StoredResponse{}, false, ErrKeyInProgress
 	}
 
-	err := s.Reserve(ctx, q, scope, key, requestHash)
-	if err != nil {
+	if err := s.Reserve(ctx, q, scope, key, requestHash); err != nil {
 		if errors.Is(err, store.ErrIdempotencyKeyExists) {
-			stored, ok, lookupErr := s.Lookup(ctx, q, scope, key)
+			state, stored, lookupErr := s.lookupState(ctx, q, scope, key)
 			if lookupErr != nil {
 				return StoredResponse{}, false, lookupErr
 			}
-			if ok {
+			switch state {
+			case StateCompleted:
 				return stored, true, nil
+			case StateInProgress:
+				return StoredResponse{}, false, ErrKeyInProgress
+			default:
+				return StoredResponse{}, false, err
 			}
-			return StoredResponse{}, false, ErrKeyInProgress
 		}
 		return StoredResponse{}, false, err
 	}

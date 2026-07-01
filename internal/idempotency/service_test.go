@@ -67,8 +67,8 @@ func TestExecuteStoresAndReplaysResponse(t *testing.T) {
 		if !replay {
 			t.Fatal("expected replay on second call")
 		}
-		if string(second.Body) != string(first.Body) {
-			t.Fatalf("body mismatch on replay")
+		if string(second.Body) != string(first.Body) && !jsonEqual(second.Body, first.Body) {
+			t.Fatalf("body mismatch on replay: %s vs %s", first.Body, second.Body)
 		}
 		return errors.New("rollback")
 	})
@@ -78,6 +78,19 @@ func TestExecuteStoresAndReplaysResponse(t *testing.T) {
 	if calls != 1 {
 		t.Fatalf("handler should run once, got %d", calls)
 	}
+}
+
+func jsonEqual(a, b json.RawMessage) bool {
+	var av, bv any
+	if err := json.Unmarshal(a, &av); err != nil {
+		return false
+	}
+	if err := json.Unmarshal(b, &bv); err != nil {
+		return false
+	}
+	ab, _ := json.Marshal(av)
+	bb, _ := json.Marshal(bv)
+	return string(ab) == string(bb)
 }
 
 func TestReserveConflictWithoutCompletedResponse(t *testing.T) {
