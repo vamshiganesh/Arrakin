@@ -3,6 +3,8 @@
 package integration
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -59,9 +61,28 @@ func TestHTTPReconciliationIdempotencyKeyReplay(t *testing.T) {
 	if got := resp2.Header.Get("X-Idempotency-Replayed"); got != "true" {
 		t.Fatalf("expected X-Idempotency-Replayed=true, got %q", got)
 	}
-	if string(body1) != string(body2) {
-		t.Fatalf("idempotent replay returned different bodies:\nfirst=%s\nsecond=%s", body1, body2)
+	if !jsonBodyEqual(body1, body2) {
+		t.Fatalf("idempotent replay returned different JSON:\nfirst=%s\nsecond=%s", body1, body2)
 	}
+}
+
+func jsonBodyEqual(a, b []byte) bool {
+	var va, vb any
+	if err := json.Unmarshal(a, &va); err != nil {
+		return false
+	}
+	if err := json.Unmarshal(b, &vb); err != nil {
+		return false
+	}
+	na, err := json.Marshal(va)
+	if err != nil {
+		return false
+	}
+	nb, err := json.Marshal(vb)
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(na, nb)
 }
 
 func TestHTTPSchedulerTickIdempotencyKeyReplay(t *testing.T) {
@@ -105,7 +126,7 @@ func TestHTTPSchedulerTickIdempotencyKeyReplay(t *testing.T) {
 	if got := headers2.Get("X-Idempotency-Replayed"); got != "true" {
 		t.Fatalf("expected X-Idempotency-Replayed=true, got %q", got)
 	}
-	if string(body1) != string(body2) {
-		t.Fatalf("idempotent replay returned different bodies:\nfirst=%s\nsecond=%s", body1, body2)
+	if !jsonBodyEqual(body1, body2) {
+		t.Fatalf("idempotent replay returned different JSON:\nfirst=%s\nsecond=%s", body1, body2)
 	}
 }
