@@ -14,10 +14,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/vamshiganesh/arrakin/internal/api"
+	"github.com/vamshiganesh/arrakin/internal/audit"
 	"github.com/vamshiganesh/arrakin/internal/config"
+	"github.com/vamshiganesh/arrakin/internal/ledger"
 	"github.com/vamshiganesh/arrakin/internal/platform/db"
 	"github.com/vamshiganesh/arrakin/internal/platform/logging"
 	"github.com/vamshiganesh/arrakin/internal/platform/redis"
+	"github.com/vamshiganesh/arrakin/internal/scheduler"
+	"github.com/vamshiganesh/arrakin/internal/settlement/calculator"
+	"github.com/vamshiganesh/arrakin/internal/settlement/orchestrator"
+	"github.com/vamshiganesh/arrakin/internal/settlement/payout"
+	"github.com/vamshiganesh/arrakin/internal/settlement/retry"
+	"github.com/vamshiganesh/arrakin/internal/store"
+	"github.com/vamshiganesh/arrakin/internal/worker"
 )
 
 func main() {
@@ -61,6 +70,40 @@ func run() error {
 		}
 	}()
 
+	st := store.New(pool.Pool)
+	repos := st.Repos()
+
+	calc, err := calculator.New(calculator.Config{
+		PlatformFeeBPS:    cfg.PlatformFeeBPS,
+		WithholdingTaxBPS: cfg.WithholdingTaxBPS,
+	})
+	if err != nil {
+		return fmt.Errorf("settlement calculator: %w", err)
+	}
+
+	auditPub := audit.NewPublisher(repos.Audit)
+	ledgerSvc := ledger.NewPostingService(repos.Ledger)
+	payoutGateway := payout.NewSimulator()
+	retryPolicy := retry.Policy{BaseDelay: cfg.RetryBaseDelay, MaxDelay: cfg.RetryMaxDelay}
+
+	orch := orchestrator.New(st, calc, auditPub, cfg.MaxRetries)
+	sched := scheduler.New(scheduler.Config{
+		Interval:        cfg.SchedulerInterval,
+		ReaperInterval:  cfg.ReaperInterval,
+		JobLeaseTimeout: cfg.JobLeaseTimeout,
+	}, orch, st, auditPub)
+	processor := worker.NewProcessor(st, ledgerSvc, auditPub, payoutGateway, retryPolicy)
+	workerPool := worker.NewPool(worker.Config{
+		WorkerCount:  cfg.WorkerCount,
+		PollInterval: cfg.WorkerPollInterval,
+		BatchSize:    cfg.WorkerBatchSize,
+	}, processor, "arrakin")
+
+	engineCtx, engineCancel := context.WithCancel(ctx)
+	defer engineCancel()
+	go sched.Run(engineCtx)
+	go workerPool.Run(engineCtx)
+
 	router := api.NewRouter(api.Dependencies{
 		Logger: logger,
 		DB:     pool,
@@ -96,6 +139,8 @@ func run() error {
 	case sig := <-sigCh:
 		logger.Info("shutdown signal received", "signal", sig.String())
 	}
+
+	engineCancel()
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer shutdownCancel()

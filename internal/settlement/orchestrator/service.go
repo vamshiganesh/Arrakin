@@ -59,10 +59,15 @@ func (s *Service) EnqueueDueMaturities(ctx context.Context) (int, error) {
 				return fmt.Errorf("calculate settlement for maturity %s: %w", row.MaturitySchedule.ID.Bytes, err)
 			}
 
+			maturityID, err := store.PgtypeToUUID(row.MaturitySchedule.ID)
+			if err != nil {
+				return err
+			}
+
 			job, inserted, err := s.repos.SettlementJobs.CreateIdempotent(ctx, q, store.CreateJobParams{
 				MaturityScheduleID:  row.MaturitySchedule.ID,
 				InvestmentID:        row.Investment.ID,
-				IdempotencyKey:      fmt.Sprintf("maturity:%x", row.MaturitySchedule.ID.Bytes),
+				IdempotencyKey:      fmt.Sprintf("maturity:%s", maturityID),
 				PrincipalCents:      breakdown.PrincipalCents.Int64(),
 				GrossReturnCents:    breakdown.GrossReturnCents.Int64(),
 				PlatformFeeCents:    breakdown.PlatformFeeCents.Int64(),
@@ -79,10 +84,6 @@ func (s *Service) EnqueueDueMaturities(ctx context.Context) (int, error) {
 
 			created++
 			jobID, err := store.PgtypeToUUID(job.ID)
-			if err != nil {
-				return err
-			}
-			maturityID, err := store.PgtypeToUUID(row.MaturitySchedule.ID)
 			if err != nil {
 				return err
 			}
