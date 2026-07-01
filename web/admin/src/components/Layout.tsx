@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { ScrollArea } from './ScrollArea'
 
 const links = [
   { to: '/', label: 'Overview', end: true },
