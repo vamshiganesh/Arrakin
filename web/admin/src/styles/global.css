@@ -67,8 +67,7 @@ body {
 }
 
 .main,
-.panel-body.flush,
-.data-table-wrap {
+.panel-body.flush {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
@@ -204,8 +203,9 @@ code,
 
 .main {
   flex: 1;
+  min-height: 0;
   padding: var(--space-xl);
-  overflow-x: auto;
+  overflow: auto;
 }
 
 .page-header {
