@@ -84,3 +84,45 @@ func (ReconciliationRepo) GetLatest(ctx context.Context, q *sqlc.Queries) (sqlc.
 	}
 	return snapshot, nil
 }
+
+// List returns historical reconciliation snapshots with cursor pagination.
+func (ReconciliationRepo) List(ctx context.Context, q *sqlc.Queries, filter ListReconciliationSnapshotsFilter) ([]sqlc.ReconciliationSnapshot, error) {
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+
+	snapshots, err := q.ListReconciliationSnapshots(ctx, sqlc.ListReconciliationSnapshotsParams{
+		CursorTime: filter.CursorTime,
+		CursorID:   filter.CursorID,
+		LimitVal:   limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list reconciliation snapshots: %w", err)
+	}
+	return snapshots, nil
+}
+
+// FlagCounts returns counts used to compute reconciliation discrepancy flags.
+func (ReconciliationRepo) FlagCounts(ctx context.Context, q *sqlc.Queries) (ReconciliationFlagCounts, error) {
+	missing, err := q.CountSucceededJobsWithoutLedger(ctx)
+	if err != nil {
+		return ReconciliationFlagCounts{}, fmt.Errorf("count missing ledger: %w", err)
+	}
+	orphan, err := q.CountOrphanLedgerJobGroups(ctx)
+	if err != nil {
+		return ReconciliationFlagCounts{}, fmt.Errorf("count orphan ledger: %w", err)
+	}
+	stale, err := q.CountStalePendingJobs(ctx)
+	if err != nil {
+		return ReconciliationFlagCounts{}, fmt.Errorf("count stale pending: %w", err)
+	}
+	return ReconciliationFlagCounts{
+		MissingLedger: missing,
+		OrphanLedger:  orphan,
+		StalePending:  stale,
+	}, nil
+}
