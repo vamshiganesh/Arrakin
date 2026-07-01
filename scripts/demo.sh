@@ -140,7 +140,7 @@ echo "$TICK_2" | jq .
 echo "Second tick should create 0 new jobs for already-settled maturities."
 
 step "Audit tail"
-curl -s "$API_BASE/api/v1/audit/events?limit=5" | jq '.items[] | {action, created_at}'
+curl -s "$API_BASE/api/v1/audit/events?limit=5" | jq '.items[] | {action, occurred_at}'
 
 echo
 echo "Demo complete."
