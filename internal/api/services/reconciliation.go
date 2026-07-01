@@ -56,22 +56,16 @@ func (s *ReconciliationService) GetLatest(ctx context.Context) (SnapshotWithFlag
 	return SnapshotWithFlags{Snapshot: snapshot, Flags: flags}, nil
 }
 
-// List returns historical snapshots (flags computed per snapshot discrepancy + live counts).
+// List returns historical snapshots with basic flags derived from stored totals.
 func (s *ReconciliationService) List(ctx context.Context, filter store.ListReconciliationSnapshotsFilter) ([]SnapshotWithFlags, error) {
 	snapshots, err := s.svc.List(ctx, s.store.Queries(), filter)
 	if err != nil {
 		return nil, err
 	}
-	liveFlags, err := s.svc.FlagsForSnapshot(ctx, s.store.Queries(), sqlc.ReconciliationSnapshot{})
-	if err != nil {
-		return nil, err
-	}
-	_ = liveFlags
 
 	out := make([]SnapshotWithFlags, 0, len(snapshots))
 	for _, snapshot := range snapshots {
-		flags := flagsFromSnapshot(snapshot)
-		out = append(out, SnapshotWithFlags{Snapshot: snapshot, Flags: flags})
+		out = append(out, SnapshotWithFlags{Snapshot: snapshot, Flags: flagsFromSnapshot(snapshot)})
 	}
 	return out, nil
 }
