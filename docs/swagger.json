@@ -1,0 +1,765 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Settlement, ledger, and payout engine HTTP API",
+        "title": "Arrakin API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
+    "paths": {
+        "/admin/scheduler/tick": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Manually trigger scheduler maturity scan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Idempotency key",
+                        "name": "Idempotency-Key",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.SchedulerTickResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/audit/events": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "audit"
+                ],
+                "summary": "List audit events",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Entity type filter",
+                        "name": "entity_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Entity UUID filter",
+                        "name": "entity_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Action filter",
+                        "name": "action",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.AuditEventListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/ledger/accounts": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ledger"
+                ],
+                "summary": "List ledger accounts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.LedgerAccountListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/ledger/entries": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ledger"
+                ],
+                "summary": "List ledger entries",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Settlement job UUID",
+                        "name": "settlement_job_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ledger account code",
+                        "name": "account_code",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Posted at from (RFC3339)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Posted at to (RFC3339)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.LedgerEntryListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/reconciliation/latest": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reconciliation"
+                ],
+                "summary": "Get latest reconciliation snapshot",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/reconciliation/run": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reconciliation"
+                ],
+                "summary": "Run reconciliation snapshot now",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Idempotency key",
+                        "name": "Idempotency-Key",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/reconciliation/snapshots": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reconciliation"
+                ],
+                "summary": "List reconciliation snapshots",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/settlement-jobs": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settlement-jobs"
+                ],
+                "summary": "List settlement jobs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Job status filter",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Investment UUID filter",
+                        "name": "investment_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (max 200)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.SettlementJobListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/settlement-jobs/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settlement-jobs"
+                ],
+                "summary": "Get settlement job by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Job UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.SettlementJobResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/settlement-jobs/{id}/attempts": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settlement-jobs"
+                ],
+                "summary": "List payout attempts for a job",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Job UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.PayoutAttemptListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/settlement-jobs/{id}/replay": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settlement-jobs"
+                ],
+                "summary": "Replay a dead-letter settlement job",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Job UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Idempotency key",
+                        "name": "Idempotency-Key",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.JobActionResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/settlement-jobs/{id}/requeue": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settlement-jobs"
+                ],
+                "summary": "Requeue a failed settlement job for immediate retry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Job UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Idempotency key",
+                        "name": "Idempotency-Key",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.JobActionResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_vamshiganesh_arrakin_internal_api_dto.AuditEventListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.AuditEventResponse"
+                    }
+                },
+                "page": {
+                    "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.PageMeta"
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.AuditEventResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "actor_id": {
+                    "type": "string"
+                },
+                "actor_type": {
+                    "type": "string"
+                },
+                "correlation_id": {
+                    "type": "string"
+                },
+                "entity_id": {
+                    "type": "string"
+                },
+                "entity_type": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "occurred_at": {
+                    "type": "string"
+                },
+                "payload": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.JobActionResponse": {
+            "type": "object",
+            "properties": {
+                "job": {
+                    "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.SettlementJobResponse"
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.LedgerAccountListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.LedgerAccountResponse"
+                    }
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.LedgerAccountResponse": {
+            "type": "object",
+            "properties": {
+                "account_type": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.LedgerEntryListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.LedgerEntryResponse"
+                    }
+                },
+                "page": {
+                    "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.PageMeta"
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.LedgerEntryResponse": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "amount_cents": {
+                    "type": "integer"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "entry_group_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "posted_at": {
+                    "type": "string"
+                },
+                "settlement_job_id": {
+                    "type": "string"
+                },
+                "side": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.PageMeta": {
+            "type": "object",
+            "properties": {
+                "has_more": {
+                    "type": "boolean"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "next_cursor": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.PayoutAttemptListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.PayoutAttemptResponse"
+                    }
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.PayoutAttemptResponse": {
+            "type": "object",
+            "properties": {
+                "attempt_number": {
+                    "type": "integer"
+                },
+                "error_class": {
+                    "type": "string"
+                },
+                "error_message": {
+                    "type": "string"
+                },
+                "finished_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "payout_reference": {
+                    "type": "string"
+                },
+                "settlement_job_id": {
+                    "type": "string"
+                },
+                "started_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationResponse"
+                    }
+                },
+                "page": {
+                    "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.PageMeta"
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationResponse": {
+            "type": "object",
+            "properties": {
+                "flags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "snapshot_at": {
+                    "type": "string"
+                },
+                "summary": {
+                    "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationSummary"
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationSummary": {
+            "type": "object",
+            "properties": {
+                "by_status": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "discrepancy_cents": {
+                    "type": "integer"
+                },
+                "expected_total_cents": {
+                    "type": "integer"
+                },
+                "succeeded_total_cents": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.SchedulerTickResponse": {
+            "type": "object",
+            "properties": {
+                "jobs_created": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.SettlementJobListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.SettlementJobResponse"
+                    }
+                },
+                "page": {
+                    "$ref": "#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.PageMeta"
+                }
+            }
+        },
+        "github_com_vamshiganesh_arrakin_internal_api_dto.SettlementJobResponse": {
+            "type": "object",
+            "properties": {
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "dead_letter_reason": {
+                    "type": "string"
+                },
+                "error_class": {
+                    "type": "string"
+                },
+                "gross_return_cents": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "investment_id": {
+                    "type": "string"
+                },
+                "last_error": {
+                    "type": "string"
+                },
+                "maturity_schedule_id": {
+                    "type": "string"
+                },
+                "max_retries": {
+                    "type": "integer"
+                },
+                "net_payout_cents": {
+                    "type": "integer"
+                },
+                "next_retry_at": {
+                    "type": "string"
+                },
+                "payout_reference": {
+                    "type": "string"
+                },
+                "platform_fee_cents": {
+                    "type": "integer"
+                },
+                "principal_cents": {
+                    "type": "integer"
+                },
+                "processing_owner": {
+                    "type": "string"
+                },
+                "retry_count": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "withholding_tax_cents": {
+                    "type": "integer"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "X-API-Key",
+            "in": "header"
+        }
+    }
+}

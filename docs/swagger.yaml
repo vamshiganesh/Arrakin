@@ -1,0 +1,495 @@
+basePath: /api/v1
+definitions:
+  github_com_vamshiganesh_arrakin_internal_api_dto.AuditEventListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.AuditEventResponse'
+        type: array
+      page:
+        $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.PageMeta'
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.AuditEventResponse:
+    properties:
+      action:
+        type: string
+      actor_id:
+        type: string
+      actor_type:
+        type: string
+      correlation_id:
+        type: string
+      entity_id:
+        type: string
+      entity_type:
+        type: string
+      id:
+        type: string
+      occurred_at:
+        type: string
+      payload:
+        items:
+          type: integer
+        type: array
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.JobActionResponse:
+    properties:
+      job:
+        $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.SettlementJobResponse'
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.LedgerAccountListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.LedgerAccountResponse'
+        type: array
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.LedgerAccountResponse:
+    properties:
+      account_type:
+        type: string
+      code:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.LedgerEntryListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.LedgerEntryResponse'
+        type: array
+      page:
+        $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.PageMeta'
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.LedgerEntryResponse:
+    properties:
+      account_id:
+        type: string
+      amount_cents:
+        type: integer
+      currency:
+        type: string
+      description:
+        type: string
+      entry_group_id:
+        type: string
+      id:
+        type: string
+      metadata:
+        items:
+          type: integer
+        type: array
+      posted_at:
+        type: string
+      settlement_job_id:
+        type: string
+      side:
+        type: string
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.PageMeta:
+    properties:
+      has_more:
+        type: boolean
+      limit:
+        type: integer
+      next_cursor:
+        type: string
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.PayoutAttemptListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.PayoutAttemptResponse'
+        type: array
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.PayoutAttemptResponse:
+    properties:
+      attempt_number:
+        type: integer
+      error_class:
+        type: string
+      error_message:
+        type: string
+      finished_at:
+        type: string
+      id:
+        type: string
+      payout_reference:
+        type: string
+      settlement_job_id:
+        type: string
+      started_at:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationResponse'
+        type: array
+      page:
+        $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.PageMeta'
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationResponse:
+    properties:
+      flags:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      snapshot_at:
+        type: string
+      summary:
+        $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationSummary'
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationSummary:
+    properties:
+      by_status:
+        additionalProperties:
+          type: integer
+        type: object
+      discrepancy_cents:
+        type: integer
+      expected_total_cents:
+        type: integer
+      succeeded_total_cents:
+        type: integer
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.SchedulerTickResponse:
+    properties:
+      jobs_created:
+        type: integer
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.SettlementJobListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.SettlementJobResponse'
+        type: array
+      page:
+        $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.PageMeta'
+    type: object
+  github_com_vamshiganesh_arrakin_internal_api_dto.SettlementJobResponse:
+    properties:
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      dead_letter_reason:
+        type: string
+      error_class:
+        type: string
+      gross_return_cents:
+        type: integer
+      id:
+        type: string
+      idempotency_key:
+        type: string
+      investment_id:
+        type: string
+      last_error:
+        type: string
+      maturity_schedule_id:
+        type: string
+      max_retries:
+        type: integer
+      net_payout_cents:
+        type: integer
+      next_retry_at:
+        type: string
+      payout_reference:
+        type: string
+      platform_fee_cents:
+        type: integer
+      principal_cents:
+        type: integer
+      processing_owner:
+        type: string
+      retry_count:
+        type: integer
+      status:
+        type: string
+      updated_at:
+        type: string
+      withholding_tax_cents:
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Settlement, ledger, and payout engine HTTP API
+  title: Arrakin API
+  version: "1.0"
+paths:
+  /admin/scheduler/tick:
+    post:
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.SchedulerTickResponse'
+      summary: Manually trigger scheduler maturity scan
+      tags:
+      - admin
+  /audit/events:
+    get:
+      parameters:
+      - description: Entity type filter
+        in: query
+        name: entity_type
+        type: string
+      - description: Entity UUID filter
+        in: query
+        name: entity_id
+        type: string
+      - description: Action filter
+        in: query
+        name: action
+        type: string
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      - description: Pagination cursor
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.AuditEventListResponse'
+      summary: List audit events
+      tags:
+      - audit
+  /ledger/accounts:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.LedgerAccountListResponse'
+      summary: List ledger accounts
+      tags:
+      - ledger
+  /ledger/entries:
+    get:
+      parameters:
+      - description: Settlement job UUID
+        in: query
+        name: settlement_job_id
+        type: string
+      - description: Ledger account code
+        in: query
+        name: account_code
+        type: string
+      - description: Posted at from (RFC3339)
+        in: query
+        name: from
+        type: string
+      - description: Posted at to (RFC3339)
+        in: query
+        name: to
+        type: string
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      - description: Pagination cursor
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.LedgerEntryListResponse'
+      summary: List ledger entries
+      tags:
+      - ledger
+  /reconciliation/latest:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationResponse'
+      summary: Get latest reconciliation snapshot
+      tags:
+      - reconciliation
+  /reconciliation/run:
+    post:
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationResponse'
+      summary: Run reconciliation snapshot now
+      tags:
+      - reconciliation
+  /reconciliation/snapshots:
+    get:
+      parameters:
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      - description: Pagination cursor
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.ReconciliationListResponse'
+      summary: List reconciliation snapshots
+      tags:
+      - reconciliation
+  /settlement-jobs:
+    get:
+      parameters:
+      - description: Job status filter
+        in: query
+        name: status
+        type: string
+      - description: Investment UUID filter
+        in: query
+        name: investment_id
+        type: string
+      - description: Page size (max 200)
+        in: query
+        name: limit
+        type: integer
+      - description: Pagination cursor
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.SettlementJobListResponse'
+      summary: List settlement jobs
+      tags:
+      - settlement-jobs
+  /settlement-jobs/{id}:
+    get:
+      parameters:
+      - description: Job UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.SettlementJobResponse'
+      summary: Get settlement job by ID
+      tags:
+      - settlement-jobs
+  /settlement-jobs/{id}/attempts:
+    get:
+      parameters:
+      - description: Job UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.PayoutAttemptListResponse'
+      summary: List payout attempts for a job
+      tags:
+      - settlement-jobs
+  /settlement-jobs/{id}/replay:
+    post:
+      parameters:
+      - description: Job UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.JobActionResponse'
+      summary: Replay a dead-letter settlement job
+      tags:
+      - settlement-jobs
+  /settlement-jobs/{id}/requeue:
+    post:
+      parameters:
+      - description: Job UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_vamshiganesh_arrakin_internal_api_dto.JobActionResponse'
+      summary: Requeue a failed settlement job for immediate retry
+      tags:
+      - settlement-jobs
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-Key
+    type: apiKey
+swagger: "2.0"
