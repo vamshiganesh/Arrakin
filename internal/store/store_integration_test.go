@@ -157,8 +157,12 @@ func TestClaimSettlementJob(t *testing.T) {
 		}
 
 		_, err = repos.SettlementJobs.Claim(ctx, q, "worker-test-2")
-		if !errors.Is(err, store.ErrNoJobAvailable) {
-			t.Fatalf("expected ErrNoJobAvailable, got %v", err)
+		if err != nil {
+			if !errors.Is(err, store.ErrNoJobAvailable) {
+				t.Fatalf("expected ErrNoJobAvailable, got %v", err)
+			}
+		} else {
+			t.Fatal("expected ErrNoJobAvailable when no other jobs exist")
 		}
 
 		return errors.New("rollback test tx")
