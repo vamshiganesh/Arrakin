@@ -171,6 +171,25 @@ func TestConcurrentWorkersNoDuplicateSuccess(t *testing.T) {
 	}
 }
 
+func getJobByMaturity(ctx context.Context, pool *pgxpool.Pool, maturityID uuid.UUID) (sqlc.SettlementJob, error) {
+	row := pool.QueryRow(ctx, `
+		SELECT id, maturity_schedule_id, investment_id, idempotency_key, status,
+			principal_cents, gross_return_cents, platform_fee_cents, withholding_tax_cents, net_payout_cents,
+			payout_reference, retry_count, max_retries, next_retry_at, processing_started_at, processing_owner,
+			last_error, error_class, dead_letter_reason, created_at, updated_at, completed_at
+		FROM settlement_jobs
+		WHERE maturity_schedule_id = $1
+	`, maturityID)
+	var j sqlc.SettlementJob
+	err := row.Scan(
+		&j.ID, &j.MaturityScheduleID, &j.InvestmentID, &j.IdempotencyKey, &j.Status,
+		&j.PrincipalCents, &j.GrossReturnCents, &j.PlatformFeeCents, &j.WithholdingTaxCents, &j.NetPayoutCents,
+		&j.PayoutReference, &j.RetryCount, &j.MaxRetries, &j.NextRetryAt, &j.ProcessingStartedAt, &j.ProcessingOwner,
+		&j.LastError, &j.ErrorClass, &j.DeadLetterReason, &j.CreatedAt, &j.UpdatedAt, &j.CompletedAt,
+	)
+	return j, err
+}
+
 func getJobByInvestment(ctx context.Context, pool *pgxpool.Pool, investmentID uuid.UUID) (sqlc.SettlementJob, error) {
 	row := pool.QueryRow(ctx, `
 		SELECT id, maturity_schedule_id, investment_id, idempotency_key, status,
