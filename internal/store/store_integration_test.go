@@ -94,7 +94,7 @@ func TestClaimSettlementJob(t *testing.T) {
 		maturityID := store.UUIDToPgtype(uuid.New())
 		investmentID := store.UUIDToPgtype(demoInvestmentID())
 
-		if _, err := q.Exec(ctx, `
+		if _, err := s.Pool().Exec(ctx, `
 			INSERT INTO maturity_schedules (id, investment_id, matures_at, status)
 			VALUES ($1, $2, now() - interval '1 hour', 'pending')
 		`, maturityID, investmentID); err != nil {
