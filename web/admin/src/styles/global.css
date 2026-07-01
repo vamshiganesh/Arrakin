@@ -36,13 +36,11 @@
   --space-lg: 1.5rem;
   --space-xl: 2rem;
 
-  --scrollbar-size: 10px;
-  --scrollbar-track: #d4dbe1;
-  --scrollbar-thumb: #8a97a3;
+  --scrollbar-size: 8px;
+  --scrollbar-thumb: rgba(90, 106, 120, 0.55);
   --scrollbar-thumb-hover: #0a6e7c;
-  --scrollbar-track-dark: rgba(255, 255, 255, 0.06);
-  --scrollbar-thumb-dark: rgba(255, 255, 255, 0.22);
-  --scrollbar-thumb-dark-hover: rgba(255, 255, 255, 0.38);
+  --scrollbar-thumb-dark: rgba(255, 255, 255, 0.28);
+  --scrollbar-thumb-dark-hover: rgba(255, 255, 255, 0.45);
 }
 
 *,
