@@ -1,4 +1,4 @@
-.PHONY: help build run test sqlc migrate-up migrate-down migrate-create seed docker-up docker-down docker-logs tidy fmt vet lint swagger
+.PHONY: help build run test sqlc migrate-up migrate-down migrate-create seed docker-up docker-down docker-logs tidy fmt vet lint swagger admin-dev admin-build
 
 APP_NAME := arrakin
 CMD_DIR := ./cmd/arrakin
