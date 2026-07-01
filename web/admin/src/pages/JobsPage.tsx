@@ -66,17 +66,18 @@ export function JobsPage() {
       <section className="panel">
         <div className="filter-bar">
           <label htmlFor="status-filter">Status</label>
-          <select
+          <Select
             id="status-filter"
             value={status}
-            onChange={(e) => setStatus(e.target.value as JobStatus | '')}
-          >
-            {statuses.map((s) => (
-              <option key={s.label} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
+            options={statuses}
+            onChange={setStatus}
+            renderValue={(option) =>
+              option.value ? <StatusBadge status={option.value} /> : option.label
+            }
+            renderOption={(option) =>
+              option.value ? <StatusBadge status={option.value} /> : option.label
+            }
+          />
         </div>
 
         {loading && jobs.length === 0 && <LoadingState />}
