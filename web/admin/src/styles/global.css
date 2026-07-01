@@ -92,9 +92,9 @@ body {
 .scroll-area-thumb {
   position: absolute;
   top: 0;
-  right: 8px;
+  right: 0;
   width: 6px;
-  border-radius: 999px;
+  border-radius: 4px 0 0 4px;
   background: var(--scrollbar-thumb);
   opacity: 0;
   transition: opacity 0.18s ease, background-color 0.15s ease;
