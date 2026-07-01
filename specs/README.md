@@ -10,8 +10,8 @@ This folder contains the implementation specifications for **Arrakin**, a reliab
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| 0 | Spec & repo plan | In progress |
-| 1 | Foundation (schema, Docker, config) | Not started |
+| 0 | Spec & repo plan | Complete |
+| 1 | Foundation (schema, Docker, config) | Complete |
 | 2 | Core domain & settlement calculator | Not started |
 | 3 | Scheduler & job queue | Not started |
 | 4 | Worker pool & payout processing | Not started |
